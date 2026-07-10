@@ -6,6 +6,13 @@ pnpm workspace monorepo. See docs/DECISIONS.md for why things are set up this wa
 shaddai-portal/
 ├── apps/
 │   ├── api/            NestJS — voucher issuance, Paystack webhook, admin ops (port 3000)
+│   │   ├── prisma/schema.prisma   Introspected from the live DB — see docs/DECISIONS.md
+│   │   └── src/
+│   │       ├── prisma/            PrismaService/PrismaModule (global)
+│   │       ├── auth/              Admin JWT login (single env-configured admin user)
+│   │       ├── plans/             GET /api/plans/public + /api/admin/plans CRUD
+│   │       ├── vouchers/          VoucherService.issue/disable/enable/extend + admin routes
+│   │       └── payments/          Paystack initialize/webhook/status
 │   ├── customer/       Next.js App Router — public buy site (port 3001)
 │   └── admin/          Next.js App Router — admin console (port 3002)
 ├── packages/
@@ -41,6 +48,20 @@ Run a single app's script with `pnpm --filter @shaddai/<name> <script>`.
 NestJS modules live under `apps/api/src/<domain>` (e.g. `vouchers`, `plans`, `payments`,
 `sessions`, `auth`), one module per business domain per CLAUDE.md conventions. Use
 `nest g module <domain>` from `apps/api`.
+
+## Working with the Prisma schema
+
+`apps/api/prisma/schema.prisma` is introspected, not hand-written — the live DB is the source of
+truth. After a schema change lands on the server:
+
+```
+cd apps/api
+pnpm db:pull      # re-introspects; preserves the @@map/@map renames already in the file
+pnpm db:generate  # regenerates the Prisma Client (also runs automatically via postinstall)
+```
+
+Dev DB access is an SSH tunnel over Tailscale to the live server (see CLAUDE.md dev environment
+notes) — `apps/api/.env`'s `DATABASE_URL` points at the forwarded `localhost:3306`.
 
 ## Adding a shared UI piece
 

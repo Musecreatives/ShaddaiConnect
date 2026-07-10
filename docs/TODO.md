@@ -13,34 +13,34 @@
 - [x] Prettier + ESLint shared config; TypeScript strict base tsconfig
 - [x] Scaffold `apps/api` (Nest CLI), `apps/customer` + `apps/admin` (create-next-app, App Router, Tailwind)
 - [x] `packages/ui`: tokens from DESIGN-SYSTEM §7 + fonts via next/font/local; export Ticket, PlanCard, Badge, SignalMeter stubs (fonts use next/font/google for now — see DECISIONS.md follow-up)
-- [ ] Dev DB access decided & working: SSH tunnel over Tailscale (`ssh -L 3306:127.0.0.1:3306 server@<tailscale-ip>`) OR local MariaDB seeded with `init.sql` — record in DECISIONS.md
+- [x] Dev DB access decided & working: SSH tunnel over Tailscale (`ssh -L 3306:127.0.0.1:3306 server@<tailscale-ip>`) OR local MariaDB seeded with `init.sql` — record in DECISIONS.md
 - [x] **Milestone:** `pnpm dev` runs all three apps; api `/health` returns ok
 
 ## Phase 1 — API core: plans & voucher engine (2–3 days)
-- [ ] Pick ORM (Prisma or TypeORM) → DECISIONS.md; map existing tables EXACTLY (no destructive migrations — schema is live)
-- [ ] Entities/models: Plan, Voucher, Payment, Customer, Device, RadCheck, RadReply, RadAcct (radacct READ-ONLY)
-- [ ] `GET /api/plans/public` (active plans)
-- [ ] Admin plans CRUD: `GET/POST/PATCH /api/admin/plans`
-- [ ] **VoucherService.issue(planId, opts)** — THE core:
-  - [ ] Code generator: `SHADDAI-` + 5 chars from safe alphabet; uniqueness check + retry
-  - [ ] Single transaction: vouchers row + radcheck (Cleartext-Password, Simultaneous-Use) + Expiration (monthly) / Session-Timeout radreply (hourly) + optional WISPr bandwidth
-  - [ ] Rollback-all on any failure; unit tests for both plan types
-- [ ] VoucherService.disable/enable/extend (keep radcheck in sync)
-- [ ] `POST /api/admin/vouchers` (single + `quantity` batch), `GET /api/admin/vouchers` (filter: status/plan/date), `PATCH /api/admin/vouchers/:id`
-- [ ] Admin auth: JWT login guard on `/api/admin/*` (single admin user via env for now)
-- [ ] **Milestone:** issue a voucher via API → authenticate with it through pfSense Diagnostics → Access-Accept
+- [x] Pick ORM (Prisma or TypeORM) → DECISIONS.md; map existing tables EXACTLY (no destructive migrations — schema is live)
+- [x] Entities/models: Plan, Voucher, Payment, Customer, Device, RadCheck, RadReply, RadAcct (radacct READ-ONLY) — introspected via `prisma db pull`, not hand-written
+- [x] `GET /api/plans/public` (active plans)
+- [x] Admin plans CRUD: `GET/POST/PATCH /api/admin/plans`
+- [x] **VoucherService.issue(planId, opts)** — THE core:
+  - [x] Code generator: `SHADDAI-` + 5 chars from safe alphabet; uniqueness check + retry
+  - [x] Single transaction: vouchers row + radcheck (Cleartext-Password, Simultaneous-Use) + Expiration (monthly) / Session-Timeout radreply (hourly) + optional WISPr bandwidth
+  - [x] Rollback-all on any failure; unit tests for both plan types
+- [x] VoucherService.disable/enable/extend (keep radcheck in sync) — extend() is monthly-only, see DECISIONS.md
+- [x] `POST /api/admin/vouchers` (single + `quantity` batch), `GET /api/admin/vouchers` (filter: status/plan/date), `PATCH /api/admin/vouchers/:id`
+- [x] Admin auth: JWT login guard on `/api/admin/*` (single admin user via env for now)
+- [ ] **Milestone:** issue a voucher via API → authenticate with it through pfSense Diagnostics → Access-Accept — verified radcheck/radreply rows are written correctly end-to-end against the live DB; the actual pfSense Diagnostics auth test needs the AP hardware and hasn't been run from here
 
 ## Phase 2 — Paystack (1–2 days)
-- [ ] Paystack TEST keys in `.env`; typed config module
-- [ ] `POST /api/payments/initialize` — create pending payment row → Paystack init → return authorization_url + reference
-- [ ] `POST /api/payments/paystack/webhook`:
-  - [ ] Raw-body capture (Nest: disable default JSON parse on this route) + HMAC-SHA512 `x-paystack-signature` verify — reject mismatches
-  - [ ] Idempotent on reference (unique constraint + upsert guard)
-  - [ ] On charge.success: mark payment success → VoucherService.issue → link voucher → store raw_payload
-  - [ ] Fast 200; log failures for replay
-- [ ] `GET /api/payments/:reference/status` (customer success-page polling)
-- [ ] Local webhook testing route documented (Paystack CLI or manual curl with computed signature)
-- [ ] **Milestone:** test-mode payment → webhook → voucher exists → works via pfSense auth test
+- [x] Paystack TEST keys in `.env`; typed config module
+- [x] `POST /api/payments/initialize` — create pending payment row → Paystack init → return authorization_url + reference
+- [x] `POST /api/payments/paystack/webhook`:
+  - [x] Raw-body capture (Nest: disable default JSON parse on this route) + HMAC-SHA512 `x-paystack-signature` verify — reject mismatches — used Nest's built-in `rawBody: true` instead of disabling the parser, see DECISIONS.md
+  - [x] Idempotent on reference (unique constraint + upsert guard) — conditional `updateMany` claim, see DECISIONS.md
+  - [x] On charge.success: mark payment success → VoucherService.issue → link voucher → store raw_payload
+  - [x] Fast 200; log failures for replay
+- [x] `GET /api/payments/:reference/status` (customer success-page polling) — also actively re-verifies with Paystack as a fallback if still pending
+- [x] Local webhook testing route documented (Paystack CLI or manual curl with computed signature) — `apps/api/scripts/test-webhook.js`, run via `pnpm test:webhook <reference>`
+- [ ] **Milestone:** test-mode payment → webhook → voucher exists → works via pfSense auth test — webhook → voucher flow verified end-to-end (incl. idempotent replay) with real Paystack TEST keys; the pfSense auth test needs the AP hardware
 
 ## Phase 3 — Customer buy site (2–3 days)
 - [ ] Layout + fonts + tokens from packages/ui

@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement()) @db.UnsignedInt
+  phone     String?  @db.VarChar(20)
+  email     String?  @db.VarChar(128)
+  name      String?  @db.VarChar(128)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([phone], map: "phone")
+  @@map("customers")
+}
+
+model Device {
+  id         Int       @id @default(autoincrement()) @db.UnsignedInt
+  voucherId  Int       @map("voucher_id") @db.UnsignedInt
+  macAddress String    @map("mac_address") @db.VarChar(17)
+  firstSeen  DateTime  @default(now()) @map("first_seen") @db.Timestamp(0)
+  lastSeen   DateTime? @map("last_seen") @db.Timestamp(0)
+
+  @@index([macAddress], map: "mac_address")
+  @@index([voucherId], map: "voucher_id")
+  @@map("devices")
+}
+
+model Nas {
+  id          Int     @id @default(autoincrement()) @db.UnsignedInt
+  nasname     String  @db.VarChar(128)
+  shortname   String? @db.VarChar(32)
+  type        String? @default("other") @db.VarChar(30)
+  ports       Int?
+  secret      String  @default("secret") @db.VarChar(60)
+  server      String? @db.VarChar(64)
+  community   String? @db.VarChar(50)
+  description String? @default("RADIUS Client") @db.VarChar(200)
+
+  @@index([nasname], map: "nasname")
+  @@map("nas")
+}
+
+model Payment {
+  id                Int           @id @default(autoincrement()) @db.UnsignedInt
+  paystackReference String        @unique(map: "paystack_reference") @map("paystack_reference") @db.VarChar(100)
+  voucherId         Int?          @map("voucher_id") @db.UnsignedInt
+  planId            Int?          @map("plan_id") @db.UnsignedInt
+  customerId        Int?          @map("customer_id") @db.UnsignedInt
+  amountNaira       Decimal       @map("amount_naira") @db.Decimal(10, 2)
+  status            PaymentStatus @default(pending)
+  rawPayload        String?       @map("raw_payload") @db.Text
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([voucherId], map: "voucher_id")
+  @@map("payments")
+}
+
+model Plan {
+  id                Int       @id @default(autoincrement()) @db.UnsignedInt
+  name              String    @db.VarChar(64)
+  planType          PlanType  @map("plan_type")
+  priceNaira        Decimal   @map("price_naira") @db.Decimal(10, 2)
+  durationHours     Int?      @map("duration_hours") @db.UnsignedInt
+  validityDays      Int?      @map("validity_days") @db.UnsignedInt
+  simultaneousUse   Int       @default(1) @map("simultaneous_use") @db.UnsignedInt
+  dataCapMb         BigInt?   @map("data_cap_mb") @db.UnsignedBigInt
+  bandwidthDownKbps Int?      @map("bandwidth_down_kbps") @db.UnsignedInt
+  bandwidthUpKbps   Int?      @map("bandwidth_up_kbps") @db.UnsignedInt
+  active            Boolean   @default(true)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  vouchers          Voucher[]
+
+  @@map("plans")
+}
+
+model RadAcct {
+  radAcctId          BigInt    @id @default(autoincrement()) @map("radacctid") @db.UnsignedBigInt
+  acctSessionId      String    @default("") @map("acctsessionid") @db.VarChar(64)
+  acctUniqueId       String    @unique(map: "acctuniqueid") @default("") @map("acctuniqueid") @db.VarChar(32)
+  username           String    @default("") @db.VarChar(64)
+  realm              String?   @default("") @db.VarChar(64)
+  nasIpAddress       String    @default("") @map("nasipaddress") @db.VarChar(15)
+  nasPortId          String?   @map("nasportid") @db.VarChar(32)
+  nasPortType        String?   @map("nasporttype") @db.VarChar(32)
+  acctStartTime      DateTime? @map("acctstarttime") @db.DateTime(0)
+  acctUpdateTime     DateTime? @map("acctupdatetime") @db.DateTime(0)
+  acctStopTime       DateTime? @map("acctstoptime") @db.DateTime(0)
+  acctInterval       Int?      @map("acctinterval")
+  acctSessionTime    Int?      @map("acctsessiontime") @db.UnsignedInt
+  acctAuthentic      String?   @map("acctauthentic") @db.VarChar(32)
+  connectInfoStart   String?   @map("connectinfo_start") @db.VarChar(50)
+  connectInfoStop    String?   @map("connectinfo_stop") @db.VarChar(50)
+  acctInputOctets    BigInt?   @map("acctinputoctets")
+  acctOutputOctets   BigInt?   @map("acctoutputoctets")
+  calledStationId    String    @default("") @map("calledstationid") @db.VarChar(50)
+  callingStationId   String    @default("") @map("callingstationid") @db.VarChar(50)
+  acctTerminateCause String    @default("") @map("acctterminatecause") @db.VarChar(32)
+  serviceType        String?   @map("servicetype") @db.VarChar(32)
+  framedProtocol     String?   @map("framedprotocol") @db.VarChar(32)
+  framedIpAddress    String    @default("") @map("framedipaddress") @db.VarChar(15)
+
+  @@index([acctSessionTime], map: "acctsessiontime")
+  @@index([acctStartTime], map: "acctstarttime")
+  @@index([acctStopTime], map: "acctstoptime")
+  @@index([nasIpAddress], map: "nasipaddress")
+  @@index([username], map: "username")
+  @@map("radacct")
+}
+
+model RadCheck {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  username  String @default("") @db.VarChar(64)
+  attribute String @default("") @db.VarChar(64)
+  op        String @default("==") @db.Char(2)
+  value     String @default("") @db.VarChar(253)
+
+  @@index([username(length: 32)], map: "username")
+  @@map("radcheck")
+}
+
+model RadGroupCheck {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  groupname String @default("") @db.VarChar(64)
+  attribute String @default("") @db.VarChar(64)
+  op        String @default("==") @db.Char(2)
+  value     String @default("") @db.VarChar(253)
+
+  @@index([groupname(length: 32)], map: "groupname")
+  @@map("radgroupcheck")
+}
+
+model RadGroupReply {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  groupname String @default("") @db.VarChar(64)
+  attribute String @default("") @db.VarChar(64)
+  op        String @default("=") @db.Char(2)
+  value     String @default("") @db.VarChar(253)
+
+  @@index([groupname(length: 32)], map: "groupname")
+  @@map("radgroupreply")
+}
+
+model RadPostAuth {
+  id       Int      @id @default(autoincrement()) @db.UnsignedInt
+  username String   @default("") @db.VarChar(64)
+  pass     String   @default("") @db.VarChar(64)
+  reply    String   @default("") @db.VarChar(32)
+  authDate DateTime @default(now()) @map("authdate") @db.Timestamp(0)
+
+  @@index([username], map: "username")
+  @@map("radpostauth")
+}
+
+model RadReply {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  username  String @default("") @db.VarChar(64)
+  attribute String @default("") @db.VarChar(64)
+  op        String @default("=") @db.Char(2)
+  value     String @default("") @db.VarChar(253)
+
+  @@index([username(length: 32)], map: "username")
+  @@map("radreply")
+}
+
+model RadUserGroup {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  username  String @default("") @db.VarChar(64)
+  groupname String @default("") @db.VarChar(64)
+  priority  Int    @default(1)
+
+  @@index([username(length: 32)], map: "username")
+  @@map("radusergroup")
+}
+
+model Voucher {
+  id                      Int           @id @default(autoincrement()) @db.UnsignedInt
+  code                    String        @unique(map: "code") @db.VarChar(32)
+  planId                  Int           @map("plan_id") @db.UnsignedInt
+  customerId              Int?          @map("customer_id") @db.UnsignedInt
+  status                  VoucherStatus @default(unused)
+  simultaneousUseOverride Int?          @map("simultaneous_use_override") @db.UnsignedInt
+  amountPaid              Decimal?      @map("amount_paid") @db.Decimal(10, 2)
+  createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+  activatedAt             DateTime?     @map("activated_at") @db.DateTime(0)
+  expiresAt               DateTime?     @map("expires_at") @db.DateTime(0)
+  plan                    Plan          @relation(fields: [planId], references: [id], onUpdate: Restrict, map: "fk_voucher_plan")
+
+  @@index([planId], map: "plan_id")
+  @@index([status], map: "status")
+  @@map("vouchers")
+}
+
+enum PlanType {
+  hourly
+  monthly
+
+  @@map("plans_plan_type")
+}
+
+enum VoucherStatus {
+  unused
+  active
+  expired
+  disabled
+
+  @@map("vouchers_status")
+}
+
+enum PaymentStatus {
+  pending
+  success
+  failed
+
+  @@map("payments_status")
+}
