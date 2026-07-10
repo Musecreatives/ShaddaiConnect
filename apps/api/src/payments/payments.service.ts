@@ -10,6 +10,7 @@ import { PaystackService } from './paystack.service';
 export interface PaymentStatusResult {
   reference: string;
   status: 'pending' | 'success' | 'failed';
+  amountNaira: number;
   voucherCode?: string;
   planName?: string;
   expiresAt?: Date | null;
@@ -135,8 +136,9 @@ export class PaymentsService {
   }
 
   private async toStatusResult(payment: Payment): Promise<PaymentStatusResult> {
+    const amountNaira = Number(payment.amountNaira);
     if (payment.status !== 'success' || !payment.voucherId) {
-      return { reference: payment.paystackReference, status: payment.status };
+      return { reference: payment.paystackReference, status: payment.status, amountNaira };
     }
     const voucher = await this.prisma.voucher.findUnique({
       where: { id: payment.voucherId },
@@ -145,6 +147,7 @@ export class PaymentsService {
     return {
       reference: payment.paystackReference,
       status: payment.status,
+      amountNaira,
       voucherCode: voucher?.code,
       planName: voucher?.plan.name,
       expiresAt: voucher?.expiresAt,

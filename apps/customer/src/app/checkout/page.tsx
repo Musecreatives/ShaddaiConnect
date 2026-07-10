@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import { BackLink } from '@/components/BackLink';
 import { CheckoutForm } from '@/components/CheckoutForm';
 import { getPublicPlans } from '@/lib/api';
 import { formatPlanMeta } from '@/lib/format';
@@ -18,9 +18,7 @@ export default async function CheckoutPage({
 
   return (
     <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col gap-5 p-6">
-      <Link href="/" className="text-sm text-cyan-deep underline">
-        ← Back to plans
-      </Link>
+      <BackLink href="/" label="Back to plans" />
 
       <div className="rounded-card bg-page p-4">
         <div className="flex items-baseline justify-between">

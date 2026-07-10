@@ -10,7 +10,11 @@ import { VoucherQr } from './VoucherQr';
 const POLL_INTERVAL_MS = 2500;
 
 export function SuccessPoller({ reference }: { reference: string }) {
-  const [status, setStatus] = useState<PaymentStatus>({ reference, status: 'pending' });
+  const [status, setStatus] = useState<PaymentStatus>({
+    reference,
+    status: 'pending',
+    amountNaira: 0,
+  });
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -40,8 +44,19 @@ export function SuccessPoller({ reference }: { reference: string }) {
   if (status.status === 'pending') {
     return (
       <div className="flex flex-col items-center gap-3 py-16 text-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-line border-t-cyan" />
-        <p className="text-sm text-muted">Confirming your payment…</p>
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          Secured by
+          <span className="rounded-[5px] bg-[#00C3F7] px-1.5 py-0.5 font-display text-[11px] font-bold text-[#001A2E]">
+            Paystack
+          </span>
+        </div>
+        <div className="mt-4 h-9 w-9 animate-spin rounded-full border-[3px] border-line border-t-cyan" />
+        <p className="mt-2 text-sm text-muted">
+          {status.amountNaira > 0
+            ? `Confirming your payment of ₦${status.amountNaira.toLocaleString('en-NG')}…`
+            : 'Confirming your payment…'}
+        </p>
+        <p className="text-xs text-muted">Card, bank transfer, or USSD — handled by Paystack.</p>
       </div>
     );
   }

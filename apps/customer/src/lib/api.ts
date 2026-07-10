@@ -23,6 +23,7 @@ export interface InitializePaymentResult {
 export interface PaymentStatus {
   reference: string;
   status: 'pending' | 'success' | 'failed';
+  amountNaira: number;
   voucherCode?: string;
   planName?: string;
   expiresAt?: string | null;
@@ -52,7 +53,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(body?.message ?? `Request failed (${res.status})`, res.status);
+    const message = Array.isArray(body?.message) ? body.message.join(' ') : body?.message;
+    throw new ApiError(message ?? `Request failed (${res.status})`, res.status);
   }
   return res.json();
 }
@@ -65,6 +67,7 @@ export function initializePayment(input: {
   planId: number;
   email: string;
   phone?: string;
+  termsAccepted: boolean;
 }): Promise<InitializePaymentResult> {
   return apiFetch<InitializePaymentResult>('/payments/initialize', {
     method: 'POST',
