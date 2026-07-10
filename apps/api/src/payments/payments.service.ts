@@ -51,11 +51,14 @@ export class PaymentsService {
     });
 
     const frontendUrl = this.config.get<string>('CUSTOMER_APP_URL');
+    // Paystack always appends its own `?reference=...&trxref=...` on redirect — don't add
+    // `?reference=` here too, or the customer lands on `/success?reference=X&reference=X`
+    // (Next.js parses repeated query keys as an array, breaking the status lookup).
     const { authorization_url } = await this.paystack.initializeTransaction({
       email: dto.email,
       amountNaira: Number(plan.priceNaira),
       reference,
-      callbackUrl: frontendUrl ? `${frontendUrl}/success?reference=${reference}` : undefined,
+      callbackUrl: frontendUrl ? `${frontendUrl}/success` : undefined,
     });
 
     return { authorizationUrl: authorization_url, reference };

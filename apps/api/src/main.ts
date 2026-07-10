@@ -1,5 +1,6 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -21,6 +22,20 @@ async function bootstrap() {
     'http://localhost:3002',
   ];
   app.enableCors({ origin: origins });
+
+  // Nest doesn't log per-request access by default — only route registration at startup.
+  // Added to make CORS/network issues (silently-blocked browser requests never reach the
+  // handler at all) visible from the server side instead of guesswork.
+  const logger = new Logger('HTTP');
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      logger.log(
+        `${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms — Origin: ${req.headers.origin ?? '(none)'}`,
+      );
+    });
+    next();
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }
