@@ -1,0 +1,21 @@
+{
+  "name": "shaddai-portal",
+  "private": true,
+  "version": "0.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.25.0",
+  "scripts": {
+    "dev": "concurrently -n api,customer,admin -c blue,green,magenta \"pnpm --filter @shaddai/api dev\" \"pnpm --filter @shaddai/customer dev\" \"pnpm --filter @shaddai/admin dev\"",
+    "build": "pnpm -r --filter=./apps/* build",
+    "lint": "pnpm -r --filter=./apps/* --filter=./packages/* lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  }
+}
