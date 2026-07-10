@@ -29,3 +29,8 @@ pnpm-debug.log*
 
 # turbo / cache
 .turbo/
+
+
+# documentation
+.docs/
+.md/

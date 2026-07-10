@@ -1,18 +1,28 @@
-import { Badge, PlanCard } from '@shaddai/ui';
+import Link from 'next/link';
+import { PlanPicker } from '@/components/PlanPicker';
+import { getPublicPlans } from '@/lib/api';
 
-export default function Home() {
+export default async function Home() {
+  const plans = await getPublicPlans();
+
   return (
-    <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col gap-4 p-6">
-      <h1 className="font-display text-2xl font-semibold text-ink">Shaddai WiFi</h1>
-      <p className="text-sm text-muted">Phase 0 scaffold — packages/ui wiring check.</p>
-      <PlanCard name="1 Hour" meta="1 device" priceNaira={200} selected />
-      <PlanCard name="30 Days" meta="Up to 3 devices" priceNaira={4000} popular />
-      <div className="flex gap-2">
-        <Badge status="unused" />
-        <Badge status="active" />
-        <Badge status="expired" />
-        <Badge status="disabled" />
+    <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col gap-5 p-6">
+      <div>
+        <h1 className="font-display text-2xl font-semibold text-ink">Shaddai WiFi</h1>
+        <p className="mt-1 text-sm text-muted">Pick a plan to get online.</p>
       </div>
+
+      {plans.length === 0 ? (
+        <p className="rounded-card border border-line bg-surface p-4 text-sm text-muted">
+          No plans are available right now. Please check back shortly.
+        </p>
+      ) : (
+        <PlanPicker plans={plans} />
+      )}
+
+      <Link href="/check" className="text-center text-sm text-cyan-deep underline">
+        Already bought a voucher? Check its status
+      </Link>
     </main>
   );
 }

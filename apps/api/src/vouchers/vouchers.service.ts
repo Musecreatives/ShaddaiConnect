@@ -153,6 +153,21 @@ export class VouchersService {
     return voucher;
   }
 
+  /**
+   * Public "check my voucher" lookup — deliberately returns only what a customer needs to see,
+   * never RADIUS internals (CLAUDE.md: "Never expose internals in customer-facing text").
+   */
+  async findByCodePublic(code: string) {
+    const voucher = await this.prisma.voucher.findUnique({ where: { code }, include: { plan: true } });
+    if (!voucher) throw new NotFoundException('Voucher not found');
+    return {
+      code: voucher.code,
+      status: voucher.status,
+      planName: voucher.plan.name,
+      expiresAt: voucher.expiresAt,
+    };
+  }
+
   /** Neutralizes radcheck rows so the code can no longer authenticate, and marks disabled. */
   async disable(id: number): Promise<Voucher> {
     const voucher = await this.findOneOrThrow(id);
