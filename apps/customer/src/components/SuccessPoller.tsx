@@ -49,9 +49,11 @@ export function SuccessPoller({ reference }: { reference: string }) {
   if (status.status === 'failed') {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-center">
-        <p className="font-display text-lg font-semibold text-ink">That payment didn't go through</p>
+        <p className="font-display text-lg font-semibold text-ink">
+          That payment didn&apos;t go through
+        </p>
         <p className="text-sm text-muted">
-          You haven't been charged for a voucher. Check your card details and try again.
+          You haven&apos;t been charged for a voucher. Check your card details and try again.
         </p>
         <Link
           href="/"
@@ -92,7 +94,7 @@ export function SuccessPoller({ reference }: { reference: string }) {
           <li>Join the Shaddai WiFi network.</li>
           <li>Open your browser — the login page appears automatically.</li>
           <li>Enter this code, or scan the QR above.</li>
-          <li>You're online.</li>
+          <li>You&apos;re online.</li>
         </ol>
       </div>
     </div>
