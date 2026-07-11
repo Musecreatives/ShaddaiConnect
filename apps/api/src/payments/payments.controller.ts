@@ -9,6 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
 import { PaymentsService } from './payments.service';
@@ -21,11 +22,18 @@ export class PaymentsController {
     private readonly paystack: PaystackService,
   ) {}
 
+  /** Each call writes a row and calls the Paystack API — cheaper to rate-limit than to let
+   * someone hammer both. */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('initialize')
   initialize(@Body() dto: InitializePaymentDto) {
     return this.payments.initialize(dto);
   }
 
+  /** Paystack retries webhook deliveries and may legitimately fire several in quick
+   * succession — never rate-limit this one. Signature verification is what actually
+   * protects it. */
+  @SkipThrottle()
   @Post('paystack/webhook')
   @HttpCode(200)
   async webhook(@Req() req: RawBodyRequest<Request>) {

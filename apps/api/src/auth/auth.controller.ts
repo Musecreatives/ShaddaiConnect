@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { ADMIN_JWT_COOKIE, ADMIN_JWT_MAX_AGE_MS } from './auth.constants';
 import { AuthService, type AdminJwtPayload } from './auth.service';
@@ -13,6 +14,10 @@ export class AuthController {
     private readonly config: ConfigService,
   ) {}
 
+  /** Stricter than the app-wide default (100/min) — this is the one endpoint where an
+   * attacker gets direct feedback on password guesses, so brute-forcing it is the actual
+   * threat rate limiting exists to stop. */
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.auth.login(dto.email, dto.password);

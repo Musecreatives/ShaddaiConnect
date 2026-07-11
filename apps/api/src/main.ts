@@ -2,11 +2,16 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import type { NextFunction, Request, Response } from 'express';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.setGlobalPrefix('api');
+  // contentSecurityPolicy is meaningful for HTML responses; this is a pure JSON API, so it's
+  // disabled rather than left to produce a header no browser here ever acts on. The rest of
+  // helmet's defaults (X-Content-Type-Options, X-Frame-Options, etc.) still apply.
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
