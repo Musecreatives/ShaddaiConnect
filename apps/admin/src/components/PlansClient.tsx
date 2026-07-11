@@ -1,0 +1,103 @@
+'use client';
+
+import { useState } from 'react';
+import { updatePlan, type Plan } from '@/lib/api';
+import { PlanFormModal } from './PlanFormModal';
+
+function formatDuration(plan: Plan): string {
+  if (plan.planType === 'hourly') return `${plan.durationHours ?? '—'} hours`;
+  return `${plan.validityDays ?? '—'} days`;
+}
+
+export function PlansClient({ initialPlans }: { initialPlans: Plan[] }) {
+  const [plans, setPlans] = useState(initialPlans);
+  const [editing, setEditing] = useState<Plan | 'new' | null>(null);
+
+  function handleSaved(saved: Plan) {
+    setPlans((prev) => {
+      const exists = prev.some((p) => p.id === saved.id);
+      return exists ? prev.map((p) => (p.id === saved.id ? saved : p)) : [saved, ...prev];
+    });
+    setEditing(null);
+  }
+
+  async function toggleActive(plan: Plan) {
+    const saved = await updatePlan(plan.id, { active: !plan.active });
+    setPlans((prev) => prev.map((p) => (p.id === plan.id ? saved : p)));
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-xl font-bold text-ink">Plans</h1>
+          <p className="mt-1 text-sm text-muted">Prices and durations shown on the buy site.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditing('new')}
+          className="rounded-btn bg-navy px-4 py-2.5 text-sm font-bold text-white"
+        >
+          + Add plan
+        </button>
+      </div>
+
+      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+              <th className="px-4 py-3 font-semibold">Name</th>
+              <th className="px-4 py-3 font-semibold">Type</th>
+              <th className="px-4 py-3 font-semibold">Duration</th>
+              <th className="px-4 py-3 font-semibold">Price</th>
+              <th className="px-4 py-3 font-semibold">Device cap</th>
+              <th className="px-4 py-3 font-semibold">Active</th>
+              <th className="px-4 py-3 font-semibold" />
+            </tr>
+          </thead>
+          <tbody>
+            {plans.map((plan) => (
+              <tr key={plan.id} className="border-b border-line last:border-0">
+                <td className="px-4 py-3 font-semibold text-ink">{plan.name}</td>
+                <td className="px-4 py-3 capitalize text-muted">{plan.planType}</td>
+                <td className="px-4 py-3 text-muted">{formatDuration(plan)}</td>
+                <td className="px-4 py-3 font-mono">
+                  ₦{plan.priceNaira.toLocaleString('en-NG')}
+                </td>
+                <td className="px-4 py-3 text-muted">{plan.simultaneousUse}</td>
+                <td className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleActive(plan)}
+                    className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase ${
+                      plan.active ? 'bg-success-tint text-success' : 'bg-page text-muted'
+                    }`}
+                  >
+                    {plan.active ? 'Active' : 'Inactive'}
+                  </button>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(plan)}
+                    className="text-xs font-semibold text-cyan-deep"
+                  >
+                    Edit
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editing && (
+        <PlanFormModal
+          plan={editing === 'new' ? undefined : editing}
+          onClose={() => setEditing(null)}
+          onSaved={handleSaved}
+        />
+      )}
+    </div>
+  );
+}

@@ -1,11 +1,13 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.setGlobalPrefix('api');
+  app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -17,11 +19,14 @@ async function bootstrap() {
   // Client components in the customer/admin apps fetch this API directly from the browser
   // (Server Components fetching server-side aren't subject to this — only the browser-side
   // calls need it). Defaults cover local dev; override via CORS_ORIGINS for staging/prod.
+  // credentials: true is required for the admin app's httpOnly JWT cookie to be sent/received
+  // cross-origin (different port = different origin, even though the cookie itself is
+  // host-scoped and shared across ports on localhost).
   const origins = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()) ?? [
     'http://localhost:3001',
     'http://localhost:3002',
   ];
-  app.enableCors({ origin: origins });
+  app.enableCors({ origin: origins, credentials: true });
 
   // Nest doesn't log per-request access by default — only route registration at startup.
   // Added to make CORS/network issues (silently-blocked browser requests never reach the

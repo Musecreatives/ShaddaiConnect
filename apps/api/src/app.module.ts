@@ -7,6 +7,8 @@ import { PlansModule } from './plans/plans.module';
 import { VouchersModule } from './vouchers/vouchers.module';
 import { AuthModule } from './auth/auth.module';
 import { PaymentsModule } from './payments/payments.module';
+import { StatsModule } from './stats/stats.module';
+import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { PaymentsModule } from './payments/payments.module';
     PlansModule,
     VouchersModule,
     PaymentsModule,
+    StatsModule,
+    SessionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
