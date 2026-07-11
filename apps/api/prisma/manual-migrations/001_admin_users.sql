@@ -1,6 +1,7 @@
--- PROPOSAL — NOT YET APPLIED. Do not run this against the live DB without explicit sign-off.
+-- APPLIED to the live DB on 2026-07-11, after showing this exact SQL to the user and getting
+-- explicit confirmation. Kept here as a record of what ran and why, not a proposal anymore.
 --
--- Adds support for multiple admin logins (currently a single hardcoded admin via
+-- Adds support for multiple admin logins (previously a single hardcoded admin via
 -- ADMIN_EMAIL/ADMIN_PASSWORD env vars — see docs/DECISIONS.md Phase 1/4 entries).
 --
 -- Design:
@@ -13,15 +14,16 @@
 --     single-admin model (all endpoints already guarded the same way for the one admin).
 --     Add roles later only if actually needed; not building it speculatively now.
 --
--- After this runs, the plan is:
---   1. `pnpm --filter @shaddai/api db:pull` to introspect this table into schema.prisma
---      (apply the usual @@map/@map PascalCase/camelCase renames — see docs/DECISIONS.md
---      on why re-introspection preserves those).
---   2. Add bcryptjs, update AuthService.login to check admin_users (bcrypt.compare) in addition
---      to the env fallback.
---   3. Add POST /api/admin/admins (create), GET /api/admin/admins (list), PATCH .../:id
---      (deactivate) — guarded the same as every other /api/admin/* route.
---   4. Admin Settings > Team page: list of admins, "+ Add admin" form (email + temp password).
+-- Follow-up work, all done and verified (see docs/DECISIONS.md):
+--   1. Re-introspected via `prisma db pull`, renamed admin_users -> AdminUser/passwordHash/etc.
+--      via @@map/@map (confirmed renames survive re-pull, same as every other model).
+--   2. AuthService.login checks admin_users (bcryptjs.compare) in addition to the env fallback.
+--   3. POST/GET /api/admin/admins + PATCH .../:id (activate/deactivate) — guarded like every
+--      other /api/admin/* route.
+--   4. Admin Settings > Team section: list of admins, "+ Add admin" form.
+-- All verified end-to-end against the live DB: created a real admin, logged in as it, wrong
+-- password rejected, disabled it and confirmed login then failed, duplicate email rejected,
+-- short password rejected by validation. Test rows cleaned up afterward.
 
 CREATE TABLE admin_users (
   id            INT UNSIGNED NOT NULL AUTO_INCREMENT,

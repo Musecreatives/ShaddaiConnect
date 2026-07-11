@@ -216,4 +216,28 @@ export function getSettings(): Promise<AdminSettings> {
   return apiFetch('/admin/settings');
 }
 
+export interface AdminUserRow {
+  id: number;
+  email: string;
+  name: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export function getAdmins(): Promise<AdminUserRow[]> {
+  return apiFetch('/admin/admins');
+}
+
+export function createAdmin(input: {
+  email: string;
+  password: string;
+  name?: string;
+}): Promise<AdminUserRow> {
+  return apiFetch('/admin/admins', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function setAdminActive(id: number, active: boolean): Promise<AdminUserRow> {
+  return apiFetch(`/admin/admins/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) });
+}
+
 export { ApiError };

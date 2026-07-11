@@ -3,6 +3,7 @@ import type {
   AdminPaymentRow,
   AdminSettings,
   AdminStats,
+  AdminUserRow,
   CustomerRow,
   NetworkOverview,
   Plan,
@@ -55,4 +56,8 @@ export function getNetworkOverviewServer(): Promise<NetworkOverview> {
 
 export function getSettingsServer(): Promise<AdminSettings> {
   return serverFetch('/admin/settings');
+}
+
+export function getAdminsServer(): Promise<AdminUserRow[]> {
+  return serverFetch('/admin/admins');
 }

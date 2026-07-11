@@ -1,4 +1,5 @@
-import { getSettingsServer } from '@/lib/server-api';
+import { TeamSection } from '@/components/TeamSection';
+import { getAdminsServer, getSettingsServer } from '@/lib/server-api';
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -10,7 +11,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default async function SettingsPage() {
-  const settings = await getSettingsServer();
+  const [settings, admins] = await Promise.all([getSettingsServer(), getAdminsServer()]);
   const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
   const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
 
@@ -19,8 +20,8 @@ export default async function SettingsPage() {
       <div>
         <h1 className="font-display text-xl font-bold text-ink">Settings</h1>
         <p className="mt-1 text-sm text-muted">
-          Current configuration. Values here come from environment variables — edit `.env` and
-          restart the api/customer apps to change them, there&apos;s no save button yet.
+          Current configuration. Network/support values here come from environment variables —
+          edit `.env` and restart to change them. Team accounts below are live and DB-backed.
         </p>
       </div>
 
@@ -49,17 +50,7 @@ export default async function SettingsPage() {
         )}
       </div>
 
-      <div className="rounded-card border border-line bg-surface">
-        <div className="border-b border-line px-4 py-3">
-          <h2 className="font-display text-sm font-semibold text-ink">Team</h2>
-        </div>
-        <Field label="Current admin" value={settings.adminEmail ?? '—'} />
-        <div className="border-t border-line px-4 py-3 text-sm text-muted">
-          Single admin account via environment config for now. Adding other admin logins needs a
-          new database table (design ready, not yet applied to the live DB — see
-          .docs/DECISIONS.md).
-        </div>
-      </div>
+      <TeamSection rootEmail={settings.adminEmail} initialAdmins={admins} />
     </div>
   );
 }
