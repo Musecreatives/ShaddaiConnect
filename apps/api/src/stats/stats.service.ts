@@ -3,20 +3,21 @@ import { PrismaService } from '../prisma/prisma.service';
 
 export interface AdminStats {
   revenueToday: number;
+  revenueYesterday: number;
   revenueLast7Days: number;
+  /** Daily revenue for the last 7 days, oldest first — for the Dashboard's sparkline. */
+  revenueTrend: number[];
   activeSessions: number;
   vouchersIssuedToday: number;
   vouchersIssuedTotal: number;
   dataUsedTodayMb: number;
 }
 
-function startOfToday(): Date {
+function startOfDay(daysAgo: number): Date {
   const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function daysAgo(days: number): Date {
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  d.setDate(d.getDate() - daysAgo);
+  return d;
 }
 
 @Injectable()
@@ -24,12 +25,15 @@ export class StatsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getStats(): Promise<AdminStats> {
-    const today = startOfToday();
-    const last7Days = daysAgo(7);
+    const today = startOfDay(0);
+    const yesterday = startOfDay(1);
+    const last7Days = startOfDay(6); // today + 6 prior days = 7 days of trend
 
     const [
       revenueTodayAgg,
+      revenueYesterdayAgg,
       revenueWeekAgg,
+      trendAggs,
       activeSessions,
       vouchersIssuedToday,
       vouchersIssuedTotal,
@@ -41,8 +45,28 @@ export class StatsService {
       }),
       this.prisma.payment.aggregate({
         _sum: { amountNaira: true },
+        where: { status: 'success', createdAt: { gte: yesterday, lt: today } },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { amountNaira: true },
         where: { status: 'success', createdAt: { gte: last7Days } },
       }),
+      // 7 small per-day aggregates rather than a raw SQL date-trunc/groupBy — Prisma has no
+      // portable groupBy-by-day helper, and this is simple, correct, and only runs on dashboard
+      // load (not a hot path).
+      Promise.all(
+        Array.from({ length: 7 }, (_, i) => {
+          const from = startOfDay(6 - i);
+          const to = startOfDay(5 - i);
+          return this.prisma.payment.aggregate({
+            _sum: { amountNaira: true },
+            where: {
+              status: 'success',
+              createdAt: i === 6 ? { gte: from } : { gte: from, lt: to },
+            },
+          });
+        }),
+      ),
       this.prisma.radAcct.count({ where: { acctStopTime: null } }),
       this.prisma.voucher.count({ where: { createdAt: { gte: today } } }),
       this.prisma.voucher.count(),
@@ -60,7 +84,9 @@ export class StatsService {
 
     return {
       revenueToday: Number(revenueTodayAgg._sum.amountNaira ?? 0),
+      revenueYesterday: Number(revenueYesterdayAgg._sum.amountNaira ?? 0),
       revenueLast7Days: Number(revenueWeekAgg._sum.amountNaira ?? 0),
+      revenueTrend: trendAggs.map((agg) => Number(agg._sum.amountNaira ?? 0)),
       activeSessions,
       vouchersIssuedToday,
       vouchersIssuedTotal,

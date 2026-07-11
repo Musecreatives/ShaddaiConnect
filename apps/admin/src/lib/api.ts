@@ -31,7 +31,9 @@ export interface Voucher {
 
 export interface AdminStats {
   revenueToday: number;
+  revenueYesterday: number;
   revenueLast7Days: number;
+  revenueTrend: number[];
   activeSessions: number;
   vouchersIssuedToday: number;
   vouchersIssuedTotal: number;
