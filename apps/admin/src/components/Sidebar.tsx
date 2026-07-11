@@ -58,12 +58,83 @@ function SessionsIcon() {
   );
 }
 
-const NAV_ITEMS = [
-  { href: '/', label: 'Dashboard', Icon: DashboardIcon },
-  { href: '/vouchers', label: 'Vouchers', Icon: VouchersIcon },
-  { href: '/plans', label: 'Plans', Icon: PlansIcon },
-  { href: '/payments', label: 'Payments', Icon: PaymentsIcon },
-  { href: '/sessions', label: 'Sessions', Icon: SessionsIcon },
+function CustomersIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M3 20C3 16.5 5.5 14 9 14C12.5 14 15 16.5 15 20"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15.5 14.3C18.2 14.7 20 16.9 20 20"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <circle cx="16" cy="7.5" r="2.3" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function NetworkIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M3 12H7L9 5L13 19L15 12H21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SupportIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 13.5723 3.40365 15.0504 4.11229 16.3355L3 21L7.66449 19.8877C8.94961 20.5964 10.4277 21 12 21Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M19.4 15A1.65 1.65 0 0 0 21 12A1.65 1.65 0 0 0 19.4 9M4.6 9A1.65 1.65 0 0 0 3 12A1.65 1.65 0 0 0 4.6 15"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+const NAV_GROUPS = [
+  {
+    label: 'Operate',
+    items: [
+      { href: '/', label: 'Dashboard', Icon: DashboardIcon },
+      { href: '/vouchers', label: 'Vouchers', Icon: VouchersIcon },
+      { href: '/plans', label: 'Plans', Icon: PlansIcon },
+      { href: '/payments', label: 'Payments', Icon: PaymentsIcon },
+      { href: '/sessions', label: 'Sessions', Icon: SessionsIcon },
+    ],
+  },
+  {
+    label: 'Manage',
+    items: [
+      { href: '/customers', label: 'Customers', Icon: CustomersIcon },
+      { href: '/network', label: 'Network / Usage', Icon: NetworkIcon },
+      { href: '/support', label: 'Support', Icon: SupportIcon },
+      { href: '/settings', label: 'Settings', Icon: SettingsIcon },
+    ],
+  },
 ] as const;
 
 export function Sidebar() {
@@ -92,23 +163,30 @@ export function Sidebar() {
         <span className="font-display text-[14px] font-bold text-white">Shaddai Admin</span>
       </div>
 
-      {NAV_ITEMS.map((item) => {
-        const active = pathname === item.href;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex items-center gap-2.5 rounded-[9px] border-l-[3px] px-3 py-2.5 text-[13.5px] font-medium transition-colors ${
-              active
-                ? 'border-cyan bg-navy-2 text-white'
-                : 'border-transparent text-white/60 hover:bg-navy-2 hover:text-white'
-            }`}
-          >
-            <item.Icon />
-            {item.label}
-          </Link>
-        );
-      })}
+      {NAV_GROUPS.map((group) => (
+        <div key={group.label} className="mb-4">
+          <div className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-wide text-white/35">
+            {group.label}
+          </div>
+          {group.items.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2.5 rounded-[9px] border-l-[3px] px-3 py-2.5 text-[13.5px] font-medium transition-colors ${
+                  active
+                    ? 'border-cyan bg-navy-2 text-white'
+                    : 'border-transparent text-white/60 hover:bg-navy-2 hover:text-white'
+                }`}
+              >
+                <item.Icon />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }

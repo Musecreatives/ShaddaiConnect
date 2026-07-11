@@ -9,6 +9,9 @@ import { AuthModule } from './auth/auth.module';
 import { PaymentsModule } from './payments/payments.module';
 import { StatsModule } from './stats/stats.module';
 import { SessionsModule } from './sessions/sessions.module';
+import { CustomersModule } from './customers/customers.module';
+import { NetworkModule } from './network/network.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { SessionsModule } from './sessions/sessions.module';
     PaymentsModule,
     StatsModule,
     SessionsModule,
+    CustomersModule,
+    NetworkModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

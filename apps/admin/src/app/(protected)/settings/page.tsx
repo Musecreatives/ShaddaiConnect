@@ -1,0 +1,65 @@
+import { getSettingsServer } from '@/lib/server-api';
+
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between border-b border-line px-4 py-3 last:border-0">
+      <span className="text-sm text-muted">{label}</span>
+      <span className="font-mono text-sm text-ink">{value}</span>
+    </div>
+  );
+}
+
+export default async function SettingsPage() {
+  const settings = await getSettingsServer();
+  const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
+  const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="font-display text-xl font-bold text-ink">Settings</h1>
+        <p className="mt-1 text-sm text-muted">
+          Current configuration. Values here come from environment variables — edit `.env` and
+          restart the api/customer apps to change them, there&apos;s no save button yet.
+        </p>
+      </div>
+
+      <div className="rounded-card border border-line bg-surface">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="font-display text-sm font-semibold text-ink">Network</h2>
+        </div>
+        <Field label="RADIUS octet direction inverted" value={String(settings.radiusInvertOctets)} />
+        <Field label="Allowed browser origins (CORS)" value={settings.corsOrigins.join(', ')} />
+      </div>
+
+      <div className="rounded-card border border-line bg-surface">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="font-display text-sm font-semibold text-ink">Customer support channels</h2>
+        </div>
+        <Field label="WhatsApp Business number" value={whatsapp || 'Not set'} />
+        <Field label="Support email" value={supportEmail || 'Not set'} />
+        {(!whatsapp || !supportEmail) && (
+          <div className="border-t border-line bg-amber-tint px-4 py-3 text-xs text-ink">
+            Set <code className="font-mono">NEXT_PUBLIC_WHATSAPP_NUMBER</code> and/or{' '}
+            <code className="font-mono">NEXT_PUBLIC_SUPPORT_EMAIL</code> in both
+            <code className="font-mono"> apps/customer/.env</code> and
+            <code className="font-mono"> apps/admin/.env</code> — the customer Support page and
+            this display read the same values independently.
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-card border border-line bg-surface">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="font-display text-sm font-semibold text-ink">Team</h2>
+        </div>
+        <Field label="Current admin" value={settings.adminEmail ?? '—'} />
+        <div className="border-t border-line px-4 py-3 text-sm text-muted">
+          Single admin account via environment config for now. Adding other admin logins needs a
+          new database table (design ready, not yet applied to the live DB — see
+          .docs/DECISIONS.md).
+        </div>
+      </div>
+    </div>
+  );
+}

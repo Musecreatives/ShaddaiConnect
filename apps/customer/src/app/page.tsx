@@ -72,6 +72,16 @@ export default async function Home() {
       >
         Already have a voucher code? Check its status
       </Link>
+
+      <div className="flex items-center justify-center gap-4 text-xs text-muted">
+        <Link href="/business" className="underline hover:text-cyan-deep">
+          For businesses
+        </Link>
+        <span aria-hidden="true">·</span>
+        <Link href="/support" className="underline hover:text-cyan-deep">
+          Support
+        </Link>
+      </div>
     </main>
   );
 }

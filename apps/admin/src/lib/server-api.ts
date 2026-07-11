@@ -1,5 +1,14 @@
 import { cookies } from 'next/headers';
-import type { AdminPaymentRow, AdminStats, Plan, SessionRow, Voucher } from './api';
+import type {
+  AdminPaymentRow,
+  AdminSettings,
+  AdminStats,
+  CustomerRow,
+  NetworkOverview,
+  Plan,
+  SessionRow,
+  Voucher,
+} from './api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
@@ -34,4 +43,16 @@ export function getSessionsServer(
   status: 'live' | 'all' = 'live',
 ): Promise<{ sessions: SessionRow[]; total: number }> {
   return serverFetch(`/admin/sessions?status=${status}`);
+}
+
+export function getCustomersServer(): Promise<{ customers: CustomerRow[]; total: number }> {
+  return serverFetch('/admin/customers');
+}
+
+export function getNetworkOverviewServer(): Promise<NetworkOverview> {
+  return serverFetch('/admin/network');
+}
+
+export function getSettingsServer(): Promise<AdminSettings> {
+  return serverFetch('/admin/settings');
 }

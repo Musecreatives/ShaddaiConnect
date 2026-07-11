@@ -174,4 +174,46 @@ export function getSessions(
   return apiFetch(`/admin/sessions?status=${status}`);
 }
 
+export interface CustomerRow {
+  id: number;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  createdAt: string;
+  voucherCount: number;
+  totalPaidNaira: number;
+}
+
+export function getCustomers(): Promise<{ customers: CustomerRow[]; total: number }> {
+  return apiFetch('/admin/customers');
+}
+
+export interface NasRow {
+  id: number;
+  nasname: string;
+  shortname: string | null;
+  type: string | null;
+  description: string | null;
+}
+
+export interface NetworkOverview {
+  nas: NasRow[];
+  dailyUsage: { date: string; totalMb: number }[];
+  totalDataAllTimeMb: number;
+}
+
+export function getNetworkOverview(): Promise<NetworkOverview> {
+  return apiFetch('/admin/network');
+}
+
+export interface AdminSettings {
+  adminEmail: string | null;
+  radiusInvertOctets: boolean;
+  corsOrigins: string[];
+}
+
+export function getSettings(): Promise<AdminSettings> {
+  return apiFetch('/admin/settings');
+}
+
 export { ApiError };
