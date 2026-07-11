@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -143,23 +144,7 @@ export function Sidebar() {
   return (
     <nav className="flex h-full w-56 shrink-0 flex-col gap-1 overflow-y-auto bg-navy p-4">
       <div className="mb-5 flex items-center gap-2.5 px-2">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-navy-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M5 12C8.9 8.5 15.1 8.5 19 12"
-              stroke="#18C7D8"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-            <path
-              d="M1.5 8.5C7 3.6 17 3.6 22.5 8.5"
-              stroke="#18C7D8"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-            <circle cx="12" cy="19" r="1.8" fill="#18C7D8" />
-          </svg>
-        </div>
+        <Image src="/logo.png" alt="Shaddai" width={30} height={30} className="shrink-0" />
         <span className="font-display text-[14px] font-bold text-white">Shaddai Admin</span>
       </div>
 
