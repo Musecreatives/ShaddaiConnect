@@ -5,10 +5,12 @@ import type {
   AdminStats,
   AdminUserRow,
   CustomerRow,
+  FraudSignal,
   NetworkOverview,
   Plan,
   SessionRow,
   Voucher,
+  WaitlistRow,
 } from './api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
@@ -60,4 +62,12 @@ export function getSettingsServer(): Promise<AdminSettings> {
 
 export function getAdminsServer(): Promise<AdminUserRow[]> {
   return serverFetch('/admin/admins');
+}
+
+export function getFraudSignalsServer(): Promise<FraudSignal[]> {
+  return serverFetch('/admin/payments/fraud-signals');
+}
+
+export function getWaitlistServer(): Promise<WaitlistRow[]> {
+  return serverFetch('/admin/waitlist');
 }

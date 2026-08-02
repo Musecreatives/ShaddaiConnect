@@ -1,4 +1,5 @@
 import { BackLink } from '@/components/BackLink';
+import { SupportContactForm } from '@/components/SupportContactForm';
 
 export const metadata = {
   title: 'Support — Shaddai WiFi',
@@ -69,6 +70,11 @@ export default function SupportPage() {
           Support contact details aren&apos;t set up yet. Check back shortly.
         </p>
       )}
+
+      <div>
+        <p className="mb-2 font-display text-sm font-semibold text-ink">Or send us a message</p>
+        <SupportContactForm />
+      </div>
 
       <div className="rounded-card bg-page p-4 text-sm text-muted">
         <p className="mb-2 font-display font-semibold text-ink">Before you reach out</p>

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CambiumSnmpService, type CambiumBackhaulStatus } from './cambium-snmp.service';
 
 export interface NasRow {
   id: number;
@@ -18,6 +19,7 @@ export interface NetworkOverview {
   nas: NasRow[];
   dailyUsage: DailyUsage[]; // last 14 days, oldest first
   totalDataAllTimeMb: number;
+  cambiumBackhaul: CambiumBackhaulStatus;
 }
 
 function startOfDay(daysAgo: number): Date {
@@ -31,11 +33,14 @@ const TREND_DAYS = 14;
 
 @Injectable()
 export class NetworkService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cambium: CambiumSnmpService,
+  ) {}
 
   async getOverview(): Promise<NetworkOverview> {
     // Never select `secret` — it's the live RADIUS shared secret (CLAUDE.md: never expose it).
-    const [nas, dailyAggs, totalAgg] = await Promise.all([
+    const [nas, dailyAggs, totalAgg, cambiumBackhaul] = await Promise.all([
       this.prisma.nas.findMany({
         select: { id: true, nasname: true, shortname: true, type: true, description: true },
         orderBy: { id: 'asc' },
@@ -54,6 +59,7 @@ export class NetworkService {
       this.prisma.radAcct.aggregate({
         _sum: { acctInputOctets: true, acctOutputOctets: true },
       }),
+      this.cambium.getBackhaulStatus(),
     ]);
 
     const dailyUsage: DailyUsage[] = dailyAggs.map((agg, i) => {
@@ -65,6 +71,6 @@ export class NetworkService {
     const totalBytes =
       Number(totalAgg._sum.acctInputOctets ?? 0) + Number(totalAgg._sum.acctOutputOctets ?? 0);
 
-    return { nas, dailyUsage, totalDataAllTimeMb: totalBytes / 1_000_000 };
+    return { nas, dailyUsage, totalDataAllTimeMb: totalBytes / 1_000_000, cambiumBackhaul };
   }
 }

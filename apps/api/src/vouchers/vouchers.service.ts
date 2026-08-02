@@ -10,6 +10,9 @@ export interface IssueVoucherOptions {
   customerId?: number;
   amountPaid?: number;
   simultaneousUseOverride?: number;
+  /** Overrides the plan's durationHours*3600 RADIUS Session-Timeout — needed for the free trial
+   * (20 minutes doesn't fit the whole-hours durationHours column) without a schema change. */
+  sessionTimeoutSecondsOverride?: number;
 }
 
 export interface VoucherFilter {
@@ -90,12 +93,13 @@ export class VouchersService {
     }
 
     if (plan.planType === 'hourly' && plan.durationHours) {
+      const seconds = opts.sessionTimeoutSecondsOverride ?? plan.durationHours * 3600;
       await tx.radReply.create({
         data: {
           username: code,
           attribute: 'Session-Timeout',
           op: ':=',
-          value: String(plan.durationHours * 3600),
+          value: String(seconds),
         },
       });
     }
@@ -160,11 +164,21 @@ export class VouchersService {
   async findByCodePublic(code: string) {
     const voucher = await this.prisma.voucher.findUnique({ where: { code }, include: { plan: true } });
     if (!voucher) throw new NotFoundException('Voucher not found');
+
+    // Read-only check for the captive portal's pre-flight validation (before it even attempts
+    // RADIUS auth) — an open radacct row (acctStopTime null) means this code is currently
+    // connected somewhere; combined with Simultaneous-Use=1 that's why a second login would fail.
+    const openSession = await this.prisma.radAcct.findFirst({
+      where: { username: code, acctStopTime: null },
+      select: { radAcctId: true },
+    });
+
     return {
       code: voucher.code,
       status: voucher.status,
       planName: voucher.plan.name,
       expiresAt: voucher.expiresAt,
+      connectedElsewhere: !!openSession,
     };
   }
 

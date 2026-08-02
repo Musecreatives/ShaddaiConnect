@@ -11,8 +11,8 @@ export function SignalMeter({ live = false, className = '' }: SignalMeterProps) 
       {BAR_HEIGHTS.map((height, i) => (
         <span
           key={i}
-          className={`w-1 rounded-sm ${live ? 'bg-cyan' : 'bg-line'}`}
-          style={{ height }}
+          className={`w-1 rounded-sm ${live ? 'bg-cyan animate-signal-pulse' : 'bg-line'}`}
+          style={{ height, animationDelay: live ? `${i * 120}ms` : undefined }}
         />
       ))}
     </span>

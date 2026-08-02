@@ -12,12 +12,19 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    // Read straight off the form's live DOM values, not React state — browser autofill
+    // (especially a fast click right after the browser fills both fields) can populate the
+    // inputs before React's onChange/state catches up, so trusting `email`/`password` state
+    // here occasionally submits stale empty values on the first try.
+    const formData = new FormData(e.currentTarget);
+    const submittedEmail = String(formData.get('email') ?? '');
+    const submittedPassword = String(formData.get('password') ?? '');
     try {
-      await login(email, password);
+      await login(submittedEmail, submittedPassword);
       router.push('/');
       router.refresh();
     } catch (err) {
@@ -46,7 +53,9 @@ export default function LoginPage() {
           </label>
           <input
             id="email"
+            name="email"
             type="email"
+            autoComplete="email"
             required
             autoFocus
             value={email}
@@ -61,7 +70,9 @@ export default function LoginPage() {
           </label>
           <input
             id="password"
+            name="password"
             type="password"
+            autoComplete="current-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}

@@ -104,12 +104,12 @@ export default function TermsPage() {
         </Section>
       </div>
 
-      <div className="rounded-card border border-amber/30 bg-amber-tint p-4 text-xs text-ink">
+      {/* <div className="rounded-card border border-amber/30 bg-amber-tint p-4 text-xs text-ink">
         <strong>Note for the site operator:</strong> this text was drafted to cover the common
         points (liability, no-sharing, no-refund, acceptable use) but has not been reviewed by a
         lawyer. Have it checked by counsel licensed in Nigeria before relying on it for real
         disputes — in particular the refund policy and liability limitation in sections 7 and 8.
-      </div>
+      </div> */}
     </main>
   );
 }

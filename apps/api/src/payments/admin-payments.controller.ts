@@ -12,4 +12,9 @@ export class AdminPaymentsController {
   list(@Query() query: QueryPaymentsDto) {
     return this.payments.listAdmin(query);
   }
+
+  @Get('fraud-signals')
+  fraudSignals() {
+    return this.payments.getFraudSignals();
+  }
 }

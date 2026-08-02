@@ -1,8 +1,16 @@
 import Link from 'next/link';
 
-export function BackLink({ href, label }: { href: string; label: string }) {
+export function BackLink({
+  href,
+  label,
+  className = 'text-muted',
+}: {
+  href: string;
+  label: string;
+  className?: string;
+}) {
   return (
-    <Link href={href} className="flex items-center gap-2 text-sm font-semibold text-muted">
+    <Link href={href} className={`flex items-center gap-2 text-sm font-semibold ${className}`}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path
           d="M15 18L9 12L15 6"

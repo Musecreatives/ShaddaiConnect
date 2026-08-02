@@ -51,6 +51,14 @@ export interface AdminPaymentRow {
   customerPhone?: string;
 }
 
+export interface FraudSignal {
+  customerId: number;
+  email?: string;
+  phone?: string;
+  failedCount: number;
+  lastAttemptAt: string;
+}
+
 export interface SessionRow {
   id: string;
   username: string;
@@ -63,6 +71,8 @@ export interface SessionRow {
   downloadBytes: number;
   uploadBytes: number;
   live: boolean;
+  signalRssi: number | null;
+  apName: string | null;
 }
 
 class ApiError extends Error {
@@ -118,6 +128,10 @@ export function createPlan(input: Partial<Plan>): Promise<Plan> {
 
 export function updatePlan(id: number, input: Partial<Plan>): Promise<Plan> {
   return apiFetch<Plan>(`/admin/plans/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export function deletePlan(id: number): Promise<{ deleted: true }> {
+  return apiFetch(`/admin/plans/${id}`, { method: 'DELETE' });
 }
 
 export interface VoucherFilter {
@@ -196,10 +210,17 @@ export interface NasRow {
   description: string | null;
 }
 
+export interface CambiumBackhaulStatus {
+  rssiDbm: number | null;
+  connectionStatus: string | null;
+  ssid: string | null;
+}
+
 export interface NetworkOverview {
   nas: NasRow[];
   dailyUsage: { date: string; totalMb: number }[];
   totalDataAllTimeMb: number;
+  cambiumBackhaul: CambiumBackhaulStatus;
 }
 
 export function getNetworkOverview(): Promise<NetworkOverview> {
@@ -238,6 +259,54 @@ export function createAdmin(input: {
 
 export function setAdminActive(id: number, active: boolean): Promise<AdminUserRow> {
   return apiFetch(`/admin/admins/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) });
+}
+
+export interface WaitlistRow {
+  id: number;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  locationNote: string | null;
+  source: 'form' | 'import';
+  confirmationSentAt: string | null;
+  notifiedAt: string | null;
+  createdAt: string;
+}
+
+export function getWaitlist(): Promise<WaitlistRow[]> {
+  return apiFetch('/admin/waitlist');
+}
+
+export function notifyWaitlistLaunch(): Promise<{ notified: number }> {
+  return apiFetch('/admin/waitlist/notify', { method: 'POST' });
+}
+
+export interface WaitlistImportSummary {
+  added: number;
+  skipped: number;
+  errors: string[];
+}
+
+export async function importWaitlistCsv(file: File): Promise<WaitlistImportSummary> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_URL}/admin/waitlist/import`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  if (res.status === 401 && typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(body?.message ?? `Request failed (${res.status})`, res.status);
+  }
+  return res.json();
+}
+
+export function notifyImportedWaitlistSignups(): Promise<{ notified: number }> {
+  return apiFetch('/admin/waitlist/notify-imported', { method: 'POST' });
 }
 
 export { ApiError };

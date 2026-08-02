@@ -83,4 +83,61 @@ export function getVoucherStatus(code: string): Promise<VoucherStatus> {
   return apiFetch<VoucherStatus>(`/vouchers/${encodeURIComponent(code)}/status`);
 }
 
+export function claimTrial(phone: string): Promise<{ code: string }> {
+  return apiFetch<{ code: string }>('/trial', {
+    method: 'POST',
+    body: JSON.stringify({ phone }),
+  });
+}
+
+export interface WaitlistSurvey {
+  description?: string;
+  workplace?: string;
+  area?: string;
+  hostelName?: string;
+  houseNumber?: string;
+  landmark?: string;
+  walkingDistance?: string;
+  mainUse?: string[];
+  hoursDaily?: string;
+  devices?: string;
+  networks?: string[];
+  challenges?: string[];
+  monthlySubscriptionRange?: string;
+  hourlyInterest?: string;
+  voucherTypes?: string[];
+  isBusinessInquiry?: boolean;
+  businessDeviceCount?: string;
+  bandwidthPreference?: string;
+  referralCount?: string;
+  wouldRefer?: string;
+  readyImmediately?: string;
+  wantsUpdates?: boolean;
+  notes?: string;
+}
+
+export function joinWaitlist(input: {
+  name?: string;
+  phone?: string;
+  email?: string;
+  locationNote?: string;
+  survey?: WaitlistSurvey;
+}): Promise<{ joined: true }> {
+  return apiFetch<{ joined: true }>('/waitlist', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function sendSupportContact(input: {
+  name: string;
+  email: string;
+  message: string;
+}): Promise<{ sent: true }> {
+  return apiFetch<{ sent: true }>('/support/contact', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export { ApiError };

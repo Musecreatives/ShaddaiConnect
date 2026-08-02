@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { updatePlan, type Plan } from '@/lib/api';
+import { ApiError, deletePlan, updatePlan, type Plan } from '@/lib/api';
 import { PlanFormModal } from './PlanFormModal';
 
 function formatDuration(plan: Plan): string {
@@ -24,6 +24,18 @@ export function PlansClient({ initialPlans }: { initialPlans: Plan[] }) {
   async function toggleActive(plan: Plan) {
     const saved = await updatePlan(plan.id, { active: !plan.active });
     setPlans((prev) => prev.map((p) => (p.id === plan.id ? saved : p)));
+  }
+
+  async function handleDelete(plan: Plan) {
+    if (!window.confirm(`Delete "${plan.name}"? This cannot be undone.`)) return;
+    try {
+      await deletePlan(plan.id);
+      setPlans((prev) => prev.filter((p) => p.id !== plan.id));
+    } catch (err) {
+      // Most common case: the api rejects deletion because vouchers already reference this
+      // plan (FK constraint) — its message already explains to deactivate instead.
+      window.alert(err instanceof ApiError ? err.message : 'Failed to delete plan.');
+    }
   }
 
   return (
@@ -77,13 +89,22 @@ export function PlansClient({ initialPlans }: { initialPlans: Plan[] }) {
                   </button>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(plan)}
-                    className="text-xs font-semibold text-cyan-deep"
-                  >
-                    Edit
-                  </button>
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(plan)}
+                      className="text-xs font-semibold text-cyan-deep"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(plan)}
+                      className="text-xs font-semibold text-danger"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

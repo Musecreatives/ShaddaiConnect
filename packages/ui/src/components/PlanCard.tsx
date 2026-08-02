@@ -14,8 +14,8 @@ export function PlanCard({ name, meta, priceNaira, selected, popular, onSelect }
     <button
       type="button"
       onClick={onSelect}
-      className={`flex w-full items-center justify-between rounded-card border-[1.5px] px-4 py-3.5 text-left transition-colors ${
-        selected ? 'border-cyan bg-cyan-tint' : 'border-line bg-surface'
+      className={`flex w-full items-center justify-between rounded-card border-[1.5px] px-4 py-3.5 text-left transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(46,117,196,.35)] ${
+        selected ? 'border-brand-blue bg-brand-blue-light/15' : 'border-line bg-surface'
       }`}
     >
       <span className="flex items-center gap-3">

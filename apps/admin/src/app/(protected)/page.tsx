@@ -1,6 +1,11 @@
 import { Badge } from '@shaddai/ui';
 import { StatCard } from '@/components/StatCard';
-import { getPaymentsServer, getStatsServer, getVouchersServer } from '@/lib/server-api';
+import {
+  getFraudSignalsServer,
+  getPaymentsServer,
+  getStatsServer,
+  getVouchersServer,
+} from '@/lib/server-api';
 
 function naira(n: number): string {
   return `₦${n.toLocaleString('en-NG')}`;
@@ -24,10 +29,11 @@ function greeting(): string {
 }
 
 export default async function DashboardPage() {
-  const [stats, vouchers, { payments }] = await Promise.all([
+  const [stats, vouchers, { payments }, fraudSignals] = await Promise.all([
     getStatsServer(),
     getVouchersServer(),
     getPaymentsServer(),
+    getFraudSignalsServer(),
   ]);
 
   const today = new Date().toLocaleDateString('en-NG', {
@@ -43,6 +49,29 @@ export default async function DashboardPage() {
         <h1 className="font-display text-xl font-bold text-ink">{greeting()}</h1>
         <p className="mt-1 text-sm text-muted">{today} · Ugbowo BDPA Estate</p>
       </div>
+
+      {fraudSignals.length > 0 && (
+        <div className="rounded-card border border-danger/30 bg-danger-tint px-4 py-3">
+          <h2 className="font-display text-sm font-semibold text-danger">
+            {fraudSignals.length} customer{fraudSignals.length === 1 ? '' : 's'} with repeated
+            failed payments
+          </h2>
+          <p className="mt-0.5 text-xs text-danger/80">
+            Not an automatic block — a heads-up to glance at, since legitimate customers retry
+            failed cards too.
+          </p>
+          <ul className="mt-2 flex flex-col gap-1 text-sm text-ink">
+            {fraudSignals.slice(0, 5).map((s) => (
+              <li key={s.customerId} className="flex items-center justify-between">
+                <span>{s.email ?? s.phone ?? `Customer #${s.customerId}`}</span>
+                <span className="font-mono text-xs text-muted">
+                  {s.failedCount} failed attempts
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard

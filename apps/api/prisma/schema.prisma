@@ -79,36 +79,44 @@ model Plan {
 }
 
 model RadAcct {
-  radAcctId          BigInt    @id @default(autoincrement()) @map("radacctid") @db.UnsignedBigInt
-  acctSessionId      String    @default("") @map("acctsessionid") @db.VarChar(64)
-  acctUniqueId       String    @unique(map: "acctuniqueid") @default("") @map("acctuniqueid") @db.VarChar(32)
-  username           String    @default("") @db.VarChar(64)
-  realm              String?   @default("") @db.VarChar(64)
-  nasIpAddress       String    @default("") @map("nasipaddress") @db.VarChar(15)
-  nasPortId          String?   @map("nasportid") @db.VarChar(32)
-  nasPortType        String?   @map("nasporttype") @db.VarChar(32)
-  acctStartTime      DateTime? @map("acctstarttime") @db.DateTime(0)
-  acctUpdateTime     DateTime? @map("acctupdatetime") @db.DateTime(0)
-  acctStopTime       DateTime? @map("acctstoptime") @db.DateTime(0)
-  acctInterval       Int?      @map("acctinterval")
-  acctSessionTime    Int?      @map("acctsessiontime") @db.UnsignedInt
-  acctAuthentic      String?   @map("acctauthentic") @db.VarChar(32)
-  connectInfoStart   String?   @map("connectinfo_start") @db.VarChar(50)
-  connectInfoStop    String?   @map("connectinfo_stop") @db.VarChar(50)
-  acctInputOctets    BigInt?   @map("acctinputoctets")
-  acctOutputOctets   BigInt?   @map("acctoutputoctets")
-  calledStationId    String    @default("") @map("calledstationid") @db.VarChar(50)
-  callingStationId   String    @default("") @map("callingstationid") @db.VarChar(50)
-  acctTerminateCause String    @default("") @map("acctterminatecause") @db.VarChar(32)
-  serviceType        String?   @map("servicetype") @db.VarChar(32)
-  framedProtocol     String?   @map("framedprotocol") @db.VarChar(32)
-  framedIpAddress    String    @default("") @map("framedipaddress") @db.VarChar(15)
+  radAcctId           BigInt    @id @default(autoincrement()) @map("radacctid") @db.UnsignedBigInt
+  acctSessionId       String    @default("") @map("acctsessionid") @db.VarChar(64)
+  acctUniqueId        String    @unique(map: "acctuniqueid") @default("") @map("acctuniqueid") @db.VarChar(32)
+  username            String    @default("") @db.VarChar(64)
+  realm               String?   @default("") @db.VarChar(64)
+  nasIpAddress        String    @default("") @map("nasipaddress") @db.VarChar(15)
+  nasPortId           String?   @map("nasportid") @db.VarChar(32)
+  nasPortType         String?   @map("nasporttype") @db.VarChar(32)
+  acctStartTime       DateTime? @map("acctstarttime") @db.DateTime(0)
+  acctUpdateTime      DateTime? @map("acctupdatetime") @db.DateTime(0)
+  acctStopTime        DateTime? @map("acctstoptime") @db.DateTime(0)
+  acctInterval        Int?      @map("acctinterval")
+  acctSessionTime     Int?      @map("acctsessiontime") @db.UnsignedInt
+  acctAuthentic       String?   @map("acctauthentic") @db.VarChar(32)
+  connectInfoStart    String?   @map("connectinfo_start") @db.VarChar(50)
+  connectInfoStop     String?   @map("connectinfo_stop") @db.VarChar(50)
+  acctInputOctets     BigInt?   @map("acctinputoctets")
+  acctOutputOctets    BigInt?   @map("acctoutputoctets")
+  calledStationId     String    @default("") @map("calledstationid") @db.VarChar(50)
+  callingStationId    String    @default("") @map("callingstationid") @db.VarChar(50)
+  acctTerminateCause  String    @default("") @map("acctterminatecause") @db.VarChar(32)
+  serviceType         String?   @map("servicetype") @db.VarChar(32)
+  framedProtocol      String?   @map("framedprotocol") @db.VarChar(32)
+  framedIpAddress     String    @default("") @map("framedipaddress") @db.VarChar(15)
+  framedipv6address   String    @default("") @db.VarChar(45)
+  framedipv6prefix    String    @default("") @db.VarChar(45)
+  framedinterfaceid   String    @default("") @db.VarChar(44)
+  delegatedipv6prefix String    @default("") @db.VarChar(45)
 
   @@index([acctSessionTime], map: "acctsessiontime")
   @@index([acctStartTime], map: "acctstarttime")
   @@index([acctStopTime], map: "acctstoptime")
   @@index([nasIpAddress], map: "nasipaddress")
   @@index([username], map: "username")
+  @@index([delegatedipv6prefix], map: "delegatedipv6prefix")
+  @@index([framedinterfaceid], map: "framedinterfaceid")
+  @@index([framedipv6address], map: "framedipv6address")
+  @@index([framedipv6prefix], map: "framedipv6prefix")
   @@map("radacct")
 }
 
@@ -206,6 +214,34 @@ model AdminUser {
   @@map("admin_users")
 }
 
+model Waitlist {
+  id                 Int            @id @default(autoincrement()) @db.UnsignedInt
+  name               String?        @db.VarChar(128)
+  phone              String?        @db.VarChar(20)
+  email              String?        @db.VarChar(128)
+  locationNote       String?        @map("location_note") @db.VarChar(255)
+  source             WaitlistSource @default(form)
+  confirmationSentAt DateTime?      @map("confirmation_sent_at") @db.Timestamp(0)
+  /// Free-form survey answers (usage patterns, pricing feedback, referrals) captured on the
+  /// full waitlist form — stored as a JSON string rather than one rigid column per question,
+  /// since most of this is one-time market-research signal, not something the app queries or
+  /// filters on. Parse/stringify at the call site.
+  surveyResponses    String?        @map("survey_responses") @db.LongText
+  notifiedAt         DateTime?      @map("notified_at") @db.Timestamp(0)
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([email], map: "email")
+  @@index([phone], map: "phone")
+  @@map("waitlist")
+}
+
+model NasReload {
+  nasIpAddress String   @id @map("nasipaddress") @db.VarChar(15)
+  reloadTime   DateTime @map("reloadtime") @db.DateTime(0)
+
+  @@map("nasreload")
+}
+
 enum PlanType {
   hourly
   monthly
@@ -228,4 +264,11 @@ enum PaymentStatus {
   failed
 
   @@map("payments_status")
+}
+
+enum WaitlistSource {
+  form
+  import
+
+  @@map("waitlist_source")
 }

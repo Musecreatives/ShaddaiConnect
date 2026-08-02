@@ -13,9 +13,10 @@ export default function SupportPage() {
 
       <div className="rounded-card border border-line bg-surface p-5">
         <p className="text-sm text-ink">
-          There&apos;s no in-app ticket queue yet — customers reach you directly through the
-          channels below (shown on the customer site&apos;s Support page). Requests won&apos;t
-          show up here; check WhatsApp/email directly.
+          There&apos;s no in-app ticket queue yet — customers reach you through WhatsApp/email
+          below, or the contact form on the customer site&apos;s Support page (which emails
+          shaddaicommunications@gmail.com directly via SendGrid). Requests won&apos;t show up
+          here; check your inbox.
         </p>
         <div className="mt-4 flex flex-col gap-2 text-sm">
           <div className="flex items-center justify-between rounded-btn bg-page px-4 py-3">

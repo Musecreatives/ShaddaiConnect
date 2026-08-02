@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { RadAcct } from '@prisma/client';
+import { OmadaClientService } from '../network/omada-client.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface SessionDto {
@@ -15,12 +16,23 @@ export interface SessionDto {
   downloadBytes: number;
   uploadBytes: number;
   live: boolean;
+  /** From the Omada Controller, matched by MAC — analytics/visibility only, never enforcement
+   * (CLAUDE.md: MACs are never the enforcement mechanism). Null when unmatched or Omada isn't
+   * configured/reachable. */
+  signalRssi: number | null;
+  apName: string | null;
 }
 
 export interface ListSessionsFilter {
   status?: 'live' | 'all';
   limit?: number;
   offset?: number;
+}
+
+/** RADIUS (colon-separated, e.g. "34:6f:24:fc:a5:2b") and Omada (often dash-separated or bare)
+ * don't necessarily agree on MAC formatting — strip separators and lowercase before matching. */
+function normalizeMac(mac: string): string {
+  return mac.toLowerCase().replace(/[^0-9a-f]/g, '');
 }
 
 @Injectable()
@@ -35,6 +47,7 @@ export class SessionsService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly omada: OmadaClientService,
     config: ConfigService,
   ) {
     this.invertOctets = config.get('RADIUS_INVERT_OCTETS') === 'true';
@@ -42,7 +55,7 @@ export class SessionsService {
 
   async list(filter: ListSessionsFilter = {}): Promise<{ sessions: SessionDto[]; total: number }> {
     const where = filter.status === 'live' ? { acctStopTime: null } : {};
-    const [rows, total] = await Promise.all([
+    const [rows, total, omadaClients] = await Promise.all([
       this.prisma.radAcct.findMany({
         where,
         orderBy: { acctStartTime: 'desc' },
@@ -50,12 +63,17 @@ export class SessionsService {
         skip: filter.offset ?? 0,
       }),
       this.prisma.radAcct.count({ where }),
+      this.omada.getConnectedClients(),
     ]);
 
-    return { sessions: rows.map((row) => this.toDto(row)), total };
+    const byMac = new Map(omadaClients.map((c) => [normalizeMac(c.mac), c]));
+    return { sessions: rows.map((row) => this.toDto(row, byMac)), total };
   }
 
-  private toDto(row: RadAcct): SessionDto {
+  private toDto(
+    row: RadAcct,
+    omadaByMac: Map<string, { rssi: number | null; apName: string | null }>,
+  ): SessionDto {
     const rawIn = Number(row.acctInputOctets ?? 0);
     const rawOut = Number(row.acctOutputOctets ?? 0);
     const live = row.acctStopTime === null;
@@ -67,6 +85,8 @@ export class SessionsService {
       const end = row.acctStopTime ?? new Date();
       durationSeconds = Math.max(0, Math.floor((end.getTime() - row.acctStartTime.getTime()) / 1000));
     }
+
+    const omadaMatch = omadaByMac.get(normalizeMac(row.callingStationId));
 
     return {
       id: row.acctUniqueId,
@@ -80,6 +100,8 @@ export class SessionsService {
       downloadBytes: this.invertOctets ? rawIn : rawOut,
       uploadBytes: this.invertOctets ? rawOut : rawIn,
       live,
+      signalRssi: omadaMatch?.rssi ?? null,
+      apName: omadaMatch?.apName ?? null,
     };
   }
 }

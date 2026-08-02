@@ -100,6 +100,7 @@ export function SessionsClient({
               <th className="px-4 py-3 font-semibold">Started</th>
               <th className="px-4 py-3 font-semibold">Duration</th>
               <th className="px-4 py-3 font-semibold">Down / Up</th>
+              <th className="px-4 py-3 font-semibold">AP</th>
               <th className="px-4 py-3 font-semibold">Signal</th>
             </tr>
           </thead>
@@ -116,14 +117,20 @@ export function SessionsClient({
                 <td className="px-4 py-3 text-muted">
                   {formatBytes(session.downloadBytes)} / {formatBytes(session.uploadBytes)}
                 </td>
+                <td className="px-4 py-3 text-muted">{session.apName ?? '—'}</td>
                 <td className="px-4 py-3">
-                  <SignalMeter live={session.live} />
+                  <div className="flex items-center gap-2">
+                    <SignalMeter live={session.live} />
+                    {session.signalRssi !== null && (
+                      <span className="font-mono text-xs text-muted">{session.signalRssi} dBm</span>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
             {sessions.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted">
+                <td colSpan={8} className="px-4 py-8 text-center text-sm text-muted">
                   {view === 'live' ? 'No devices connected right now.' : 'No session history yet.'}
                 </td>
               </tr>

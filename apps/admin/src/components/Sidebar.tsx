@@ -131,6 +131,7 @@ const NAV_GROUPS = [
     label: 'Manage',
     items: [
       { href: '/customers', label: 'Customers', Icon: CustomersIcon },
+      { href: '/waitlist', label: 'Waitlist', Icon: CustomersIcon },
       { href: '/network', label: 'Network / Usage', Icon: NetworkIcon },
       { href: '/support', label: 'Support', Icon: SupportIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },

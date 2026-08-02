@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Plan } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { TRIAL_PLAN_NAME } from '../trial/trial.constants';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 
@@ -41,8 +42,11 @@ export class PlansService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findPublic(): Promise<PlanDto[]> {
+    // The free trial plan (see trial/trial.constants.ts) is active (needs to be, for
+    // VouchersService.issueInTx to accept it) but excluded here by name — /trial is the only
+    // route that should ever issue it.
     const plans = await this.prisma.plan.findMany({
-      where: { active: true },
+      where: { active: true, name: { not: TRIAL_PLAN_NAME } },
       orderBy: { priceNaira: 'asc' },
     });
     return plans.map(toPlanDto);
@@ -95,5 +99,17 @@ export class PlansService {
       },
     });
     return toPlanDto(plan);
+  }
+
+  async remove(id: number): Promise<{ deleted: true }> {
+    await this.findOneOrThrow(id);
+    const voucherCount = await this.prisma.voucher.count({ where: { planId: id } });
+    if (voucherCount > 0) {
+      throw new ConflictException(
+        `Cannot delete this plan — ${voucherCount} voucher(s) reference it. Deactivate it instead (toggle Active off) to hide it from the buy site while keeping voucher history intact.`,
+      );
+    }
+    await this.prisma.plan.delete({ where: { id } });
+    return { deleted: true };
   }
 }

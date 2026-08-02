@@ -7,7 +7,7 @@
   },
   "packageManager": "pnpm@10.25.0",
   "scripts": {
-    "dev": "concurrently -n api,customer,admin -c blue,green,magenta \"pnpm --filter @shaddai/api dev\" \"pnpm --filter @shaddai/customer dev\" \"pnpm --filter @shaddai/admin dev\"",
+    "dev": "concurrently -n api,customer,admin,website -c blue,green,magenta,yellow \"pnpm --filter @shaddai/api dev\" \"pnpm --filter @shaddai/customer dev\" \"pnpm --filter @shaddai/admin dev\" \"pnpm --filter @shaddai/website dev\"",
     "build": "pnpm -r --filter=./apps/* build",
     "lint": "pnpm -r --filter=./apps/* --filter=./packages/* lint",
     "format": "prettier --write .",

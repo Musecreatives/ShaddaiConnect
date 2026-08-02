@@ -5,7 +5,7 @@ function formatDay(dateStr: string): string {
 }
 
 export default async function NetworkPage() {
-  const { nas, dailyUsage, totalDataAllTimeMb } = await getNetworkOverviewServer();
+  const { nas, dailyUsage, totalDataAllTimeMb, cambiumBackhaul } = await getNetworkOverviewServer();
   const maxMb = Math.max(...dailyUsage.map((d) => d.totalMb), 1);
 
   return (
@@ -18,6 +18,40 @@ export default async function NetworkPage() {
             : `${totalDataAllTimeMb.toFixed(1)} MB`}{' '}
           transferred all-time.
         </p>
+      </div>
+
+      <div className="rounded-card border border-line bg-surface p-5">
+        <h2 className="mb-3 font-display text-sm font-semibold text-ink">
+          Cambium backhaul link
+        </h2>
+        {cambiumBackhaul.rssiDbm === null ? (
+          <p className="text-sm text-muted">Not configured — set CAMBIUM_SNMP_HOST to enable.</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <span>
+              <span className="text-muted">Signal: </span>
+              <span
+                className={`font-mono font-semibold ${
+                  cambiumBackhaul.rssiDbm >= -65
+                    ? 'text-success'
+                    : cambiumBackhaul.rssiDbm >= -75
+                      ? 'text-amber'
+                      : 'text-danger'
+                }`}
+              >
+                {cambiumBackhaul.rssiDbm} dBm
+              </span>
+            </span>
+            <span>
+              <span className="text-muted">Status: </span>
+              <span className="font-semibold text-ink">{cambiumBackhaul.connectionStatus ?? '—'}</span>
+            </span>
+            <span>
+              <span className="text-muted">SSID: </span>
+              <span className="font-mono text-ink">{cambiumBackhaul.ssid ?? '—'}</span>
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="rounded-card border border-line bg-surface p-5">

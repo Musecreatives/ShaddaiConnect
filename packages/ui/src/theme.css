@@ -22,11 +22,72 @@
   --color-success: #149e7c;
   --color-success-tint: #e2f5ef;
 
-  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  /* Darker-blue theme extension (2026-07-23) — brand-blue is the new primary accent for
+     customer-facing surfaces; cyan stays as a legacy/tertiary accent where already baked into
+     shared components (SignalMeter, PlanCard). Named to parallel the existing page/surface/line
+     tokens (bg-page-dark, bg-surface-dark, border-line-dark), not a literal "bg-dark" utility. */
+  --color-brand-blue: #2e75c4;
+  --color-brand-blue-deep: #1b4a7a;
+  --color-brand-blue-light: #8fc1e8;
+  --color-page-dark: #0a1420;
+  --color-surface-dark: #101e30;
+  --color-line-dark: #223349;
+
+  --font-display: var(--font-poppins), system-ui, sans-serif;
   --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   --radius-btn: 13px;
   --radius-card: 16px;
   --radius-frame: 22px;
+
+  /* Restrained motion additions (2026-07-23) — a utility/WiFi product, not a game, so these are
+     deliberately subtle: a signal-bar pulse for "live" state, and fade/slide-in for cards and
+     success states. Nothing here delays perceived load — animations only ever run on already-
+     rendered content, never gate visibility. */
+  --animate-signal-pulse: signal-pulse 1.6s ease-in-out infinite;
+  --animate-fade-slide-in: fade-slide-in 0.35s ease-out both;
+  --animate-twinkle: twinkle 3s ease-in-out infinite;
+  --animate-float: float 5s ease-in-out infinite;
+}
+
+@keyframes signal-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }

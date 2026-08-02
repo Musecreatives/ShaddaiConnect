@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import type { Payment } from '@prisma/client';
+import { EmailService } from '../email/email.service';
+import { voucherTemplate } from '../email/templates/voucher.template';
 import { PrismaService } from '../prisma/prisma.service';
 import { VouchersService } from '../vouchers/vouchers.service';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
@@ -28,6 +30,14 @@ export interface AdminPaymentRow {
   customerPhone?: string;
 }
 
+export interface FraudSignal {
+  customerId: number;
+  email?: string;
+  phone?: string;
+  failedCount: number;
+  lastAttemptAt: Date;
+}
+
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
@@ -37,6 +47,7 @@ export class PaymentsService {
     private readonly paystack: PaystackService,
     private readonly vouchers: VouchersService,
     private readonly config: ConfigService,
+    private readonly email: EmailService,
   ) {}
 
   async initialize(dto: InitializePaymentDto) {
@@ -129,7 +140,9 @@ export class PaymentsService {
    * caller ever sees `count === 1` and proceeds to issue a voucher.
    */
   private async processSuccessfulPayment(reference: string, rawPayload: string): Promise<Payment> {
-    return this.prisma.$transaction(async (tx) => {
+    let issuedVoucherId: number | undefined;
+
+    const result = await this.prisma.$transaction(async (tx) => {
       const payment = await tx.payment.findUnique({ where: { paystackReference: reference } });
       if (!payment) throw new NotFoundException(`Payment ${reference} not found`);
       if (payment.status === 'success') return payment;
@@ -147,11 +160,44 @@ export class PaymentsService {
         customerId: payment.customerId ?? undefined,
         amountPaid: Number(payment.amountNaira),
       });
+      issuedVoucherId = voucher.id;
 
       return tx.payment.update({
         where: { id: payment.id },
         data: { voucherId: voucher.id },
       });
+    });
+
+    // Fire-and-forget, post-commit — only on the call that actually won the issuance race,
+    // never on a re-delivered webhook or the status-poll fallback hitting the short-circuits above.
+    if (issuedVoucherId) {
+      this.sendVoucherEmail(result).catch((err) =>
+        this.logger.error(`Voucher email dispatch failed for ${reference}: ${err}`),
+      );
+    }
+
+    return result;
+  }
+
+  private async sendVoucherEmail(payment: Payment): Promise<void> {
+    if (!payment.customerId) return;
+    const customer = await this.prisma.customer.findUnique({ where: { id: payment.customerId } });
+    if (!customer?.email || !payment.voucherId) return;
+
+    const voucher = await this.prisma.voucher.findUnique({
+      where: { id: payment.voucherId },
+      include: { plan: true },
+    });
+    if (!voucher) return;
+
+    await this.email.send({
+      to: customer.email,
+      subject: 'Your Shaddai WiFi voucher',
+      html: voucherTemplate({
+        code: voucher.code,
+        planName: voucher.plan.name,
+        expiresAt: voucher.expiresAt,
+      }),
     });
   }
 
@@ -211,6 +257,41 @@ export class PaymentsService {
           : undefined,
       })),
     };
+  }
+
+  /**
+   * Simple fraud signal: customers with several failed payments in a short window — no queue,
+   * no ML, just a grouped count query against data already being written. Proportionate to this
+   * business's actual scale (see .docs/DECISIONS.md — a Kafka/SQS pipeline was considered and
+   * explicitly not used here, this business does dozens-to-low-hundreds of purchases a day, not
+   * thousands/sec). Surfaced in the admin dashboard as a heads-up, not an automatic block —
+   * legitimate customers retry failed cards too; this is a signal for a human to glance at, not
+   * an enforcement mechanism.
+   */
+  async getFraudSignals(windowMinutes = 15, minFailures = 3): Promise<FraudSignal[]> {
+    const since = new Date(Date.now() - windowMinutes * 60 * 1000);
+    const grouped = await this.prisma.payment.groupBy({
+      by: ['customerId'],
+      where: { status: 'failed', createdAt: { gte: since }, customerId: { not: null } },
+      _count: { id: true },
+      _max: { createdAt: true },
+      having: { id: { _count: { gte: minFailures } } },
+    });
+
+    const customerIds = grouped.map((g) => g.customerId).filter((id): id is number => id != null);
+    const customers = await this.prisma.customer.findMany({ where: { id: { in: customerIds } } });
+    const customerById = new Map(customers.map((c) => [c.id, c]));
+
+    return grouped
+      .filter((g) => g.customerId != null)
+      .map((g) => ({
+        customerId: g.customerId as number,
+        email: customerById.get(g.customerId as number)?.email ?? undefined,
+        phone: customerById.get(g.customerId as number)?.phone ?? undefined,
+        failedCount: g._count.id,
+        lastAttemptAt: g._max.createdAt as Date,
+      }))
+      .sort((a, b) => b.failedCount - a.failedCount);
   }
 
   private async toStatusResult(payment: Payment): Promise<PaymentStatusResult> {

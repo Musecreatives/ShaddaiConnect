@@ -1,0 +1,101 @@
+# Runs the 3 app containers on the same Ubuntu host that already runs shaddai-mariadb and
+# shaddai-freeradius (see CLAUDE.md / .docs/DECISIONS.md / .docs/pfsenseDECISIONS.md). Reuses the
+# existing `radius` database — this compose file does NOT define its own MariaDB service.
+#
+# network_mode: host on all three, not just api: api needs it to reach MariaDB at
+# 127.0.0.1:3306 (same reasoning as FreeRADIUS's network_mode: host, see CLAUDE.md) without a
+# host-gateway workaround; customer/admin get it too so they can reach the api without relying on
+# Docker's bridge DNS (host.docker.internal isn't available on native Linux Docker the way it is
+# on Docker Desktop).
+#
+# Ports: 4001/4002/4003, NOT the dev convention's 3000/3001/3002 — this server already runs a
+# full homelab stack (Sonarr/Radarr/*arr, AdGuard Home, Caddy, dockhand, etc.) and 3000/3001 were
+# already bound (dockhand, adguardhome) when this was first deployed, 2026-07-11. See
+# .docs/DECISIONS.md Phase 6 entry. Local `pnpm dev` on the Windows dev machine is unaffected —
+# still 3000/3001/3002 there, since that's a separate machine with no such collision.
+#
+# customer/admin also need HOSTNAME=0.0.0.0 explicitly: network_mode: host means the container
+# shares the host's UTS namespace too, so Docker's usual auto-set HOSTNAME env var becomes the
+# real host hostname ("server") instead of a container ID. Next's standalone server.js binds to
+# process.env.HOSTNAME when set, which resolved to 127.0.1.1 (Ubuntu's default /etc/hosts alias
+# for its own hostname) — reachable from the host itself but not a real bind-all address. Without
+# this override, `curl 127.0.0.1:4002` connection-refused even though the process was "Ready".
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ../apps/api/.env
+    environment:
+      PORT: '4001'
+    mem_limit: 512m
+
+  customer:
+    build:
+      context: ..
+      dockerfile: apps/customer/Dockerfile
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ../apps/customer/.env
+    environment:
+      PORT: '4002'
+      HOSTNAME: '0.0.0.0'
+    mem_limit: 256m
+    depends_on:
+      - api
+
+  admin:
+    build:
+      context: ..
+      dockerfile: apps/admin/Dockerfile
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ../apps/admin/.env
+    environment:
+      PORT: '4003'
+      HOSTNAME: '0.0.0.0'
+    mem_limit: 256m
+    depends_on:
+      - api
+
+  website:
+    build:
+      context: ..
+      dockerfile: apps/website/Dockerfile
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ../apps/website/.env
+    environment:
+      PORT: '4004'
+      HOSTNAME: '0.0.0.0'
+    mem_limit: 256m
+    depends_on:
+      - api
+
+  # Named Cloudflare Tunnel — replaces the earlier trycloudflare.com Quick Tunnel, which had no
+  # persistence (a plain `nohup ... &` process, killed manually, gone on reboot) and a rotating
+  # URL. This is a real, dashboard-managed tunnel: stable hostname once Public Hostname routes are
+  # configured in the Cloudflare Zero Trust dashboard (Networks > Tunnels > shaddai-portal),
+  # `restart: unless-stopped` like the app containers, survives reboots. Token lives in
+  # docker/.env.cloudflared (gitignored via the .env.* pattern — NOT cloudflared.env, which
+  # wouldn't match) rather than as a --token CLI arg, which would otherwise be visible in
+  # `docker inspect`/process listings.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - .env.cloudflared
+    # `dns:` is ignored under network_mode: host (no separate network namespace to apply it to) —
+    # bind-mount a resolv.conf directly instead, so this container doesn't depend on the host's
+    # Tailscale-managed resolver (100.100.100.100), which has been observed to SERVFAIL on
+    # external lookups after a reboot. See docker/cloudflared-resolv.conf for why.
+    volumes:
+      - ./cloudflared-resolv.conf:/etc/resolv.conf:ro

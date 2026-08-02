@@ -1,4 +1,4 @@
-import { Inter, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
+import { Inter, JetBrains_Mono, Poppins } from 'next/font/google';
 
 /**
  * Phase 0 note (see docs/DECISIONS.md): DESIGN-SYSTEM.md §3 calls for next/font/local with
@@ -6,11 +6,13 @@ import { Inter, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
  * next/font/google instead — output is still build-time self-hosted with zero runtime
  * requests to Google, matching the "no external requests" requirement. Swap for
  * next/font/local once the font files are sourced, keeping the same `variable` names.
+ *
+ * Display font switched Space Grotesk -> Poppins, 2026-07-24 (site-wide brand font decision).
  */
-export const spaceGrotesk = Space_Grotesk({
+export const poppins = Poppins({
   subsets: ['latin'],
   weight: ['500', '600', '700'],
-  variable: '--font-space-grotesk',
+  variable: '--font-poppins',
   display: 'swap',
 });
 
@@ -29,4 +31,4 @@ export const jetbrainsMono = JetBrains_Mono({
 });
 
 /** Apply to the root <html> className in each app's layout.tsx. */
-export const fontVariables = `${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`;
+export const fontVariables = `${poppins.variable} ${inter.variable} ${jetbrainsMono.variable}`;

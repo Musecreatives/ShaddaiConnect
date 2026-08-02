@@ -73,6 +73,12 @@ Rollback ALL on any failure. Never leave a vouchers row without radcheck rows or
 - Design tokens in `docs/DESIGN-SYSTEM.md` — use them; don't invent new colors.
 - Currency/locale: en-NG, Africa/Lagos timezone for display; store UTC.
 
+## Infra boundaries
+
+Never attempt to SSH into, reconfigure, or enable services on the pfSense VM
+(192.168.1.1). pfSense is managed manually via its web UI only. The API's
+only infra dependency is MariaDB via the documented SSH tunnel.
+
 ## What NOT to do
 
 - Do not modify the FreeRADIUS or MariaDB container configs from this repo — infra is managed on the server (`~/shaddai-billing`).
