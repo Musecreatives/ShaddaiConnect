@@ -13,6 +13,8 @@ build/
 .next/
 out/
 
+CLAUDE.md
+
 # testing
 coverage/
 
