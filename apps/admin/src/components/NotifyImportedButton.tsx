@@ -36,7 +36,7 @@ export function NotifyImportedButton({ pendingCount }: { pendingCount: number })
         type="button"
         onClick={handleClick}
         disabled={loading || pendingCount === 0}
-        className="rounded-btn border-[1.5px] border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:border-cyan disabled:opacity-35"
+        className="rounded-btn border-[1.5px] border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:border-brand-blue disabled:opacity-35"
       >
         {loading ? 'Sending…' : `Send confirmations (${pendingCount})`}
       </button>

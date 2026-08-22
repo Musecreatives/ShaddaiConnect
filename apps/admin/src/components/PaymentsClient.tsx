@@ -49,7 +49,7 @@ export function PaymentsClient({
             onClick={() => handleFilterChange(status)}
             className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
               statusFilter === status
-                ? 'border-cyan bg-cyan-tint text-cyan-deep'
+                ? 'border-brand-blue bg-brand-blue-light/20 text-brand-blue-deep'
                 : 'border-line text-muted'
             }`}
           >
@@ -81,7 +81,7 @@ export function PaymentsClient({
                     href={`https://dashboard.paystack.com/#/transactions?query=${payment.reference}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-cyan-deep underline"
+                    className="text-brand-blue-deep underline"
                     title="Open in Paystack dashboard"
                   >
                     {payment.reference}

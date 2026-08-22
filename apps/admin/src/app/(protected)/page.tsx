@@ -2,9 +2,12 @@ import { Badge } from '@shaddai/ui';
 import { StatCard } from '@/components/StatCard';
 import {
   getFraudSignalsServer,
+  getNetworkOverviewServer,
   getPaymentsServer,
   getStatsServer,
+  getTrialFeedbackServer,
   getVouchersServer,
+  getWaitlistServer,
 } from '@/lib/server-api';
 
 function naira(n: number): string {
@@ -29,12 +32,19 @@ function greeting(): string {
 }
 
 export default async function DashboardPage() {
-  const [stats, vouchers, { payments }, fraudSignals] = await Promise.all([
+  const [stats, vouchers, { payments }, fraudSignals, waitlist, trialFeedback, network] = await Promise.all([
     getStatsServer(),
     getVouchersServer(),
     getPaymentsServer(),
     getFraudSignalsServer(),
+    getWaitlistServer(),
+    getTrialFeedbackServer(),
+    getNetworkOverviewServer(),
   ]);
+  const networkOnline = network.nas.length > 0;
+  const cambiumOk = network.cambiumBackhaul.rssiDbm !== null && network.cambiumBackhaul.rssiDbm >= -65;
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const waitlistThisWeek = waitlist.filter((w) => new Date(w.createdAt).getTime() >= weekAgo).length;
 
   const today = new Date().toLocaleDateString('en-NG', {
     weekday: 'long',
@@ -93,7 +103,81 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-4 rounded-card bg-navy p-5 text-white sm:grid-cols-4">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-white/40">
+            Network status
+          </div>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${networkOnline ? 'bg-success' : 'bg-line'}`} />
+            <span className="text-sm font-semibold">{networkOnline ? 'Online' : 'No NAS configured'}</span>
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-white/40">
+            Cambium signal
+          </div>
+          <div className="mt-1.5 font-mono text-lg font-semibold">
+            {network.cambiumBackhaul.rssiDbm !== null ? (
+              <span className={cambiumOk ? 'text-success' : 'text-amber'}>
+                {network.cambiumBackhaul.rssiDbm} dBm
+              </span>
+            ) : (
+              <span className="text-white/40">
+                {network.cambiumBackhaul.configured ? 'Unreachable' : 'Not configured'}
+              </span>
+            )}
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-white/40">
+            Active sessions
+          </div>
+          <div className="mt-1.5 font-mono text-lg font-semibold">{stats.activeSessions}</div>
+        </div>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-white/40">
+            Access points
+          </div>
+          <div className="mt-1.5 font-mono text-lg font-semibold">{network.nas.length}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="rounded-card border border-line bg-surface">
+          <div className="border-b border-line px-4 py-3">
+            <h2 className="font-display text-sm font-semibold text-ink">Top bandwidth users</h2>
+          </div>
+          <table className="w-full text-left text-sm">
+            <tbody>
+              {network.topBandwidthUsers.slice(0, 5).map((user) => {
+                const maxMb = network.topBandwidthUsers[0]?.totalMb || 1;
+                const pct = Math.max(4, (user.totalMb / maxMb) * 100);
+                return (
+                  <tr key={user.code} className="border-b border-line last:border-0">
+                    <td className="px-4 py-2.5 font-mono text-[13px]">{user.code}</td>
+                    <td className="px-4 py-2.5 text-right text-muted">
+                      {user.totalMb >= 1000 ? `${(user.totalMb / 1000).toFixed(1)} GB` : `${user.totalMb.toFixed(1)} MB`}
+                    </td>
+                    <td className="w-24 px-4 py-2.5">
+                      <div className="h-1 overflow-hidden rounded-full bg-brand-blue-light/20">
+                        <div className="h-full rounded-full bg-brand-blue" style={{ width: `${pct}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {network.topBandwidthUsers.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-6 text-center text-sm text-muted">
+                    No usage data yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
         <div className="rounded-card border border-line bg-surface">
           <div className="border-b border-line px-4 py-3">
             <h2 className="font-display text-sm font-semibold text-ink">Recent vouchers</h2>
@@ -161,12 +245,18 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Data used today"
           value={`${stats.dataUsedTodayMb.toFixed(1)} MB`}
           hint="Approximate — sessions that started today"
         />
+        <StatCard
+          label="Waitlist signups"
+          value={String(waitlist.length)}
+          hint={waitlistThisWeek > 0 ? `+${waitlistThisWeek} this week` : undefined}
+        />
+        <StatCard label="Trial feedback" value={String(trialFeedback.length)} hint="Total responses" />
       </div>
     </div>
   );

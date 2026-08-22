@@ -51,7 +51,7 @@ export function CheckoutForm({ plan }: { plan: Plan }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+          className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
         />
         <p className="text-xs text-muted">Your voucher code and receipt go here.</p>
       </div>
@@ -66,21 +66,21 @@ export function CheckoutForm({ plan }: { plan: Plan }) {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="080X XXX XXXX"
-          className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+          className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
         />
       </div>
 
       <ul className="flex flex-col gap-1.5 rounded-card bg-page p-4 text-xs text-muted">
         <li className="flex gap-2">
-          <span className="text-cyan-deep">•</span>
+          <span className="text-brand-blue-deep">•</span>
           {deviceNote} — extra devices beyond that are refused automatically.
         </li>
         <li className="flex gap-2">
-          <span className="text-cyan-deep">•</span>
+          <span className="text-brand-blue-deep">•</span>
           You&apos;re responsible for your own use of this connection.
         </li>
         <li className="flex gap-2">
-          <span className="text-cyan-deep">•</span>
+          <span className="text-brand-blue-deep">•</span>
           No refunds once your code is issued.
         </li>
       </ul>
@@ -90,11 +90,11 @@ export function CheckoutForm({ plan }: { plan: Plan }) {
           type="checkbox"
           checked={termsAccepted}
           onChange={(e) => setTermsAccepted(e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 accent-cyan"
+          className="mt-0.5 h-4 w-4 shrink-0 accent-brand-blue"
         />
         <span>
           I agree to the{' '}
-          <Link href="/terms" target="_blank" className="text-cyan-deep underline">
+          <Link href="/terms" target="_blank" className="text-brand-blue-deep underline">
             Terms &amp; Acceptable Use
           </Link>
           , including the no-sharing and liability terms above.

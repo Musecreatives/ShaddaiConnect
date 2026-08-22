@@ -55,7 +55,7 @@ export function CreateVoucherModal({
           <select
             value={planId}
             onChange={(e) => setPlanId(Number(e.target.value))}
-            className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+            className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
           >
             {plans.map((plan) => (
               <option key={plan.id} value={plan.id}>
@@ -73,7 +73,7 @@ export function CreateVoucherModal({
             max={500}
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
-            className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+            className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
           />
         </div>
 
@@ -94,7 +94,7 @@ export function CreateVoucherModal({
           <button
             type="submit"
             disabled={submitting || !planId}
-            className="flex-1 rounded-btn bg-navy py-3 text-[15px] font-bold text-white disabled:opacity-35"
+            className="flex-1 rounded-btn bg-brand-blue py-3 text-[15px] font-bold text-white transition-colors hover:bg-brand-blue-deep disabled:opacity-35"
           >
             {submitting ? 'Creating…' : `Create ${quantity > 1 ? quantity : ''}`}
           </button>

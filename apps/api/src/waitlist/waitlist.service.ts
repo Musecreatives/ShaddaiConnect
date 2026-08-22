@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
+import { NtfyService } from '../ntfy/ntfy.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { waitlistConfirmationTemplate } from '../email/templates/waitlist-confirmation.template';
 import { waitlistLaunchTemplate } from '../email/templates/waitlist-launch.template';
@@ -21,6 +22,7 @@ export class WaitlistService {
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
     private readonly config: ConfigService,
+    private readonly ntfy: NtfyService,
   ) {}
 
   async join(dto: JoinWaitlistDto): Promise<{ joined: true }> {
@@ -59,6 +61,12 @@ export class WaitlistService {
         html: waitlistConfirmationTemplate(dto.name),
       });
     }
+
+    this.ntfy.publish({
+      title: 'New waitlist signup',
+      message: `${dto.name}${dto.locationNote ? ` from ${dto.locationNote}` : ''}`,
+      tags: ['raised_hand'],
+    });
 
     return { joined: true };
   }

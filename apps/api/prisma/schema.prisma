@@ -8,11 +8,12 @@ datasource db {
 }
 
 model Customer {
-  id        Int      @id @default(autoincrement()) @db.UnsignedInt
-  phone     String?  @db.VarChar(20)
-  email     String?  @db.VarChar(128)
-  name      String?  @db.VarChar(128)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  phone        String?  @db.VarChar(20)
+  email        String?  @db.VarChar(128)
+  name         String?  @db.VarChar(128)
+  locationNote String?  @map("location_note") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
 
   @@index([phone], map: "phone")
   @@map("customers")
@@ -195,6 +196,7 @@ model Voucher {
   amountPaid              Decimal?      @map("amount_paid") @db.Decimal(10, 2)
   createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
   activatedAt             DateTime?     @map("activated_at") @db.DateTime(0)
+  feedbackRequestedAt     DateTime?     @map("feedback_requested_at") @db.Timestamp(0)
   expiresAt               DateTime?     @map("expires_at") @db.DateTime(0)
   plan                    Plan          @relation(fields: [planId], references: [id], onUpdate: Restrict, map: "fk_voucher_plan")
 
@@ -242,6 +244,66 @@ model NasReload {
   @@map("nasreload")
 }
 
+model TrialFeedback {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  voucherId      Int      @map("voucher_id") @db.UnsignedInt
+  signalQuality  String?  @map("signal_quality") @db.VarChar(32)
+  wouldBuy       String?  @map("would_buy") @db.VarChar(16)
+  locationNote   String?  @map("location_note") @db.VarChar(255)
+  comments       String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([voucherId], map: "voucher_id")
+  @@map("trial_feedback")
+}
+
+model VoucherNotification {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  voucherCode String   @map("voucher_code") @db.VarChar(32)
+  title       String   @db.VarChar(128)
+  body        String   @db.VarChar(255)
+  sentAt      DateTime @default(now()) @map("sent_at") @db.Timestamp(0)
+
+  @@index([voucherCode], map: "voucher_code")
+  @@map("voucher_notifications")
+}
+
+model PushSubscription {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  endpoint     String   @unique(map: "endpoint") @db.VarChar(500)
+  p256dh       String   @db.VarChar(255)
+  auth         String   @db.VarChar(255)
+  voucherCode  String?  @map("voucher_code") @db.VarChar(32)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([voucherCode], map: "voucher_code")
+  @@map("push_subscriptions")
+}
+
+model BlockedMac {
+  id                Int      @id @default(autoincrement()) @db.UnsignedInt
+  macAddress        String   @unique(map: "mac_address") @map("mac_address") @db.VarChar(50)
+  reason            String?  @db.VarChar(255)
+  blockedByAdminId  Int?     @map("blocked_by_admin_id") @db.UnsignedInt
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@map("blocked_macs")
+}
+
+model SupportTicket {
+  id            Int                 @id @default(autoincrement()) @db.UnsignedInt
+  customerName  String              @map("customer_name") @db.VarChar(128)
+  customerEmail String              @map("customer_email") @db.VarChar(128)
+  message       String              @db.Text
+  priority      SupportPriority     @default(medium)
+  status        SupportTicketStatus @default(open)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([status], map: "status")
+  @@map("support_tickets")
+}
+
 enum PlanType {
   hourly
   monthly
@@ -271,4 +333,19 @@ enum WaitlistSource {
   import
 
   @@map("waitlist_source")
+}
+
+enum SupportPriority {
+  low
+  medium
+  high
+
+  @@map("support_tickets_priority")
+}
+
+enum SupportTicketStatus {
+  open
+  resolved
+
+  @@map("support_tickets_status")
 }

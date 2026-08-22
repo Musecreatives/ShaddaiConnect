@@ -211,9 +211,15 @@ export interface NasRow {
 }
 
 export interface CambiumBackhaulStatus {
+  configured: boolean;
   rssiDbm: number | null;
   connectionStatus: string | null;
   ssid: string | null;
+}
+
+export interface TopBandwidthUser {
+  code: string;
+  totalMb: number;
 }
 
 export interface NetworkOverview {
@@ -221,6 +227,7 @@ export interface NetworkOverview {
   dailyUsage: { date: string; totalMb: number }[];
   totalDataAllTimeMb: number;
   cambiumBackhaul: CambiumBackhaulStatus;
+  topBandwidthUsers: TopBandwidthUser[];
 }
 
 export function getNetworkOverview(): Promise<NetworkOverview> {
@@ -231,6 +238,8 @@ export interface AdminSettings {
   adminEmail: string | null;
   radiusInvertOctets: boolean;
   corsOrigins: string[];
+  ntfyConfigured: boolean;
+  pushConfigured: boolean;
 }
 
 export function getSettings(): Promise<AdminSettings> {
@@ -277,6 +286,20 @@ export function getWaitlist(): Promise<WaitlistRow[]> {
   return apiFetch('/admin/waitlist');
 }
 
+export interface TrialFeedbackRow {
+  id: number;
+  voucherCode: string | null;
+  signalQuality: 'excellent' | 'good' | 'weak' | 'no_connection' | null;
+  wouldBuy: 'yes' | 'maybe' | 'no' | null;
+  locationNote: string | null;
+  comments: string | null;
+  createdAt: string;
+}
+
+export function getTrialFeedback(): Promise<TrialFeedbackRow[]> {
+  return apiFetch('/admin/trial-feedback');
+}
+
 export function notifyWaitlistLaunch(): Promise<{ notified: number }> {
   return apiFetch('/admin/waitlist/notify', { method: 'POST' });
 }
@@ -307,6 +330,76 @@ export async function importWaitlistCsv(file: File): Promise<WaitlistImportSumma
 
 export function notifyImportedWaitlistSignups(): Promise<{ notified: number }> {
   return apiFetch('/admin/waitlist/notify-imported', { method: 'POST' });
+}
+
+export interface AdminNotification {
+  id: string;
+  title: string;
+  message: string;
+  tags: string[];
+  time: number;
+}
+
+export function getNotifications(): Promise<AdminNotification[]> {
+  return apiFetch('/admin/notifications');
+}
+
+export interface SupportTicket {
+  id: number;
+  customerName: string;
+  customerEmail: string;
+  message: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'open' | 'resolved';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getSupportTickets(): Promise<SupportTicket[]> {
+  return apiFetch('/admin/support-tickets');
+}
+
+export function updateSupportTicket(
+  id: number,
+  input: { status?: 'open' | 'resolved'; priority?: 'low' | 'medium' | 'high' },
+): Promise<SupportTicket> {
+  return apiFetch(`/admin/support-tickets/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export interface BlockedMac {
+  id: number;
+  macAddress: string;
+  reason: string | null;
+  blockedByAdminId: number | null;
+  createdAt: string;
+}
+
+export function getBlockedMacs(): Promise<BlockedMac[]> {
+  return apiFetch('/admin/blocked-macs');
+}
+
+export function blockMac(
+  macAddress: string,
+  reason?: string,
+): Promise<BlockedMac & { disabledVoucherCount: number }> {
+  return apiFetch('/admin/blocked-macs', {
+    method: 'POST',
+    body: JSON.stringify({ macAddress, reason }),
+  });
+}
+
+export function unblockMac(id: number): Promise<{ unblocked: true }> {
+  return apiFetch(`/admin/blocked-macs/${id}`, { method: 'DELETE' });
+}
+
+export interface DisconnectResult {
+  attempted: boolean;
+  success: boolean;
+  message: string;
+}
+
+export function disconnectVoucher(code: string): Promise<DisconnectResult> {
+  return apiFetch(`/admin/vouchers/${encodeURIComponent(code)}/disconnect`, { method: 'POST' });
 }
 
 export { ApiError };

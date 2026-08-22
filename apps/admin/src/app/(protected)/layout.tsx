@@ -1,5 +1,4 @@
-import { Sidebar } from '@/components/Sidebar';
-import { Topbar } from '@/components/Topbar';
+import { AdminShell } from '@/components/AdminShell';
 import { requireAdmin } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
@@ -17,12 +16,8 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const [{ email }, apiHealthy] = await Promise.all([requireAdmin(), checkApiHealth()]);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Topbar email={email} apiHealthy={apiHealthy} />
-        <main className="flex-1 overflow-y-auto bg-page p-7">{children}</main>
-      </div>
-    </div>
+    <AdminShell email={email} apiHealthy={apiHealthy}>
+      {children}
+    </AdminShell>
   );
 }

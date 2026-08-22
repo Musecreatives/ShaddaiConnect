@@ -78,6 +78,27 @@ services:
     depends_on:
       - api
 
+  # Self-hosted push notifications (replaces ntfy.sh in the design mockups with a private
+  # instance — using the public ntfy.sh would mean every voucher/payment/support event gets
+  # broadcast through a third party's server). Deliberately NOT network_mode: host like the
+  # others: bridge networking + an explicit 127.0.0.1-only port publish means it's reachable from
+  # the api container (also on this host) but never from the public internet, even if the host
+  # firewall is misconfigured. The topic name itself acts as the shared secret (long, random,
+  # never logged) since there's no other auth in front of it.
+  ntfy:
+    image: binwiederhier/ntfy
+    command: serve
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:4005:80'
+    volumes:
+      - ntfy-cache:/var/cache/ntfy
+    environment:
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+      NTFY_CACHE_DURATION: 168h
+      NTFY_BEHIND_PROXY: 'false'
+    mem_limit: 128m
+
   # Named Cloudflare Tunnel — replaces the earlier trycloudflare.com Quick Tunnel, which had no
   # persistence (a plain `nohup ... &` process, killed manually, gone on reboot) and a rotating
   # URL. This is a real, dashboard-managed tunnel: stable hostname once Public Hostname routes are
@@ -99,3 +120,6 @@ services:
     # external lookups after a reboot. See docker/cloudflared-resolv.conf for why.
     volumes:
       - ./cloudflared-resolv.conf:/etc/resolv.conf:ro
+
+volumes:
+  ntfy-cache:

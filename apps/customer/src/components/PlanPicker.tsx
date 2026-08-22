@@ -18,7 +18,7 @@ export function PlanPicker({ plans }: { plans: Plan[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2">
         {plans.map((plan, i) => (
           <div key={plan.id} className="animate-fade-slide-in" style={{ animationDelay: `${i * 60}ms` }}>
             <PlanCard

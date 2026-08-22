@@ -50,6 +50,44 @@ export default async function SettingsPage() {
         )}
       </div>
 
+      <div className="rounded-card border border-line bg-surface">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <h2 className="font-display text-sm font-semibold text-ink">Notifications</h2>
+          <span
+            className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase ${
+              settings.ntfyConfigured ? 'bg-success-tint text-success' : 'bg-amber-tint text-amber'
+            }`}
+          >
+            {settings.ntfyConfigured ? 'ntfy connected' : 'ntfy not configured'}
+          </span>
+        </div>
+        <Field
+          label="Admin alerts (ntfy)"
+          value={settings.ntfyConfigured ? 'Self-hosted, private' : 'Not set — see NTFY_URL/NTFY_TOPIC'}
+        />
+        {settings.ntfyConfigured && (
+          <div className="border-b border-line px-4 py-3 last:border-0">
+            <div className="mb-2 text-sm text-muted">Subscribed events</div>
+            <div className="flex flex-wrap gap-2">
+              {['Free trial signup', 'New payment', 'Waitlist signup', 'Support message', 'Device blocked'].map(
+                (event) => (
+                  <span
+                    key={event}
+                    className="rounded-full bg-brand-blue-light/20 px-2.5 py-1 text-[11px] font-semibold text-brand-blue-deep"
+                  >
+                    {event}
+                  </span>
+                ),
+              )}
+            </div>
+          </div>
+        )}
+        <Field
+          label="Customer push notifications (Web Push)"
+          value={settings.pushConfigured ? 'Enabled' : 'Not set — see VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY'}
+        />
+      </div>
+
       <TeamSection rootEmail={settings.adminEmail} initialAdmins={admins} />
     </div>
   );

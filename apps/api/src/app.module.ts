@@ -19,6 +19,10 @@ import { TrialModule } from './trial/trial.module';
 import { EmailModule } from './email/email.module';
 import { WaitlistModule } from './waitlist/waitlist.module';
 import { SupportModule } from './support/support.module';
+import { NtfyModule } from './ntfy/ntfy.module';
+import { BlockedMacsModule } from './blocked-macs/blocked-macs.module';
+import { PushModule } from './push/push.module';
+import { CoaModule } from './coa/coa.module';
 
 @Module({
   imports: [
@@ -42,6 +46,10 @@ import { SupportModule } from './support/support.module';
     EmailModule,
     WaitlistModule,
     SupportModule,
+    NtfyModule,
+    BlockedMacsModule,
+    PushModule,
+    CoaModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -1,4 +1,5 @@
 import { BackLink } from '@/components/BackLink';
+import { BuyShell } from '@/components/BuyShell';
 import { SupportContactForm } from '@/components/SupportContactForm';
 
 export const metadata = {
@@ -11,7 +12,8 @@ export default function SupportPage() {
   const hasAnyChannel = Boolean(whatsappNumber || supportEmail);
 
   return (
-    <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col gap-5 p-6">
+    <BuyShell>
+    <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col gap-5 p-6 lg:flex-none lg:rounded-2xl lg:border lg:border-line lg:bg-surface lg:p-8 lg:shadow-sm">
       <BackLink href="/" label="Back to plans" />
 
       <div>
@@ -28,7 +30,7 @@ export default function SupportPage() {
               href={`https://wa.me/${whatsappNumber}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 rounded-card border-[1.5px] border-line bg-surface px-4 py-3.5 transition-colors hover:border-cyan"
+              className="flex items-center gap-3 rounded-card border-[1.5px] border-line bg-surface px-4 py-3.5 transition-colors hover:border-brand-blue"
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success-tint">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -50,9 +52,9 @@ export default function SupportPage() {
           {supportEmail && (
             <a
               href={`mailto:${supportEmail}`}
-              className="flex items-center gap-3 rounded-card border-[1.5px] border-line bg-surface px-4 py-3.5 transition-colors hover:border-cyan"
+              className="flex items-center gap-3 rounded-card border-[1.5px] border-line bg-surface px-4 py-3.5 transition-colors hover:border-brand-blue"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan-tint">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-blue-light/20">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="5" width="18" height="14" rx="2" stroke="#0E9AA8" strokeWidth="1.6" />
                   <path d="M3 6L12 13L21 6" stroke="#0E9AA8" strokeWidth="1.6" strokeLinecap="round" />
@@ -82,7 +84,7 @@ export default function SupportPage() {
           <li>Have your voucher code ready if it&apos;s about a purchase.</li>
           <li>
             You can check a code&apos;s status yourself at{' '}
-            <a href="/check" className="text-cyan-deep underline">
+            <a href="/check" className="text-brand-blue-deep underline">
               /check
             </a>{' '}
             first.
@@ -90,5 +92,6 @@ export default function SupportPage() {
         </ul>
       </div>
     </main>
+    </BuyShell>
   );
 }

@@ -32,7 +32,7 @@ export function WaitlistImportForm() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
-        <label className="cursor-pointer rounded-btn border-[1.5px] border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:border-cyan">
+        <label className="cursor-pointer rounded-btn border-[1.5px] border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:border-brand-blue">
           {loading ? 'Importing…' : 'Import CSV'}
           <input
             ref={fileInputRef}

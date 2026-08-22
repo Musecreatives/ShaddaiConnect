@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { BuyShell } from '@/components/BuyShell';
 import { PlanPicker } from '@/components/PlanPicker';
 import { getPublicPlans } from '@/lib/api';
 
@@ -16,14 +17,18 @@ export default async function Home() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col gap-5 p-6">
-      <div className="animate-fade-slide-in flex items-center gap-3">
+    <BuyShell>
+    <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col gap-5 p-6 lg:max-w-xl lg:flex-none lg:rounded-2xl lg:border lg:border-line lg:bg-surface lg:p-9 lg:shadow-sm">
+      <a
+        href="https://shaddaicommunications.com"
+        className="animate-fade-slide-in flex items-center gap-3 lg:hidden"
+      >
         <Image src="/logo.png" alt="Shaddai WiFi" width={36} height={36} className="shrink-0" />
         <div>
           <div className="font-display text-[15px] font-bold text-ink">Shaddai WiFi</div>
           <div className="text-[11px] text-muted">Ugbowo BDPA Estate</div>
         </div>
-      </div>
+      </a>
 
       <div className="animate-fade-slide-in" style={{ animationDelay: '40ms' }}>
         <div className="mb-1 font-mono text-[10.5px] font-bold uppercase tracking-[0.09em] text-brand-blue-deep">
@@ -83,5 +88,6 @@ export default async function Home() {
         </Link>
       </div>
     </main>
+    </BuyShell>
   );
 }

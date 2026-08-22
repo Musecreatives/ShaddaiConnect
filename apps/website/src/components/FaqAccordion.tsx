@@ -5,11 +5,11 @@ import { useState } from 'react';
 const FAQS = [
   {
     q: 'How do I know if I’m in range?',
-    a: 'Check your phone or laptop’s WiFi list for a network called "Shaddai WiFi." If you can see it, you’re in range — join the waitlist and we’ll email you the moment it’s live for real.',
+    a: 'Check your phone or laptop’s WiFi list for a network called "Shaddai WiFi." If you can see it, you’re in range. Not seeing it yet? Join the waitlist and we’ll email you the moment we reach your street.',
   },
   {
     q: 'How much does it cost?',
-    a: 'Hourly vouchers start from ₦1,200, with weekly and monthly plans also available. Exact pricing is confirmed at launch — everyone on the waitlist gets 20 minutes free to try it first.',
+    a: 'Hourly vouchers start from ₦1,200, with weekly and monthly plans also available — see the pricing above. First time? Try 20 minutes free before you buy.',
   },
   {
     q: 'How many devices can I connect?',
@@ -33,22 +33,22 @@ export function FaqAccordion() {
       {FAQS.map((item, i) => {
         const open = openIndex === i;
         return (
-          <div key={item.q} className="rounded-card border border-line bg-surface">
+          <div key={item.q} className="rounded-frame border border-line-dark bg-surface-dark">
             <button
               type="button"
               onClick={() => setOpenIndex(open ? null : i)}
               className="flex w-full items-center justify-between px-5 py-4 text-left"
             >
-              <span className="font-display text-sm font-semibold text-ink">{item.q}</span>
+              <span className="font-display text-sm font-semibold text-white">{item.q}</span>
               <span
-                className={`shrink-0 text-lg text-brand-blue-deep transition-transform duration-150 ${open ? 'rotate-45' : ''}`}
+                className={`shrink-0 text-lg text-brand-blue-light transition-transform duration-150 ${open ? 'rotate-45' : ''}`}
                 aria-hidden="true"
               >
                 +
               </span>
             </button>
             {open && (
-              <p className="animate-fade-slide-in px-5 pb-4 text-sm text-muted">{item.a}</p>
+              <p className="animate-fade-slide-in px-5 pb-4 text-sm text-white/45">{item.a}</p>
             )}
           </div>
         );

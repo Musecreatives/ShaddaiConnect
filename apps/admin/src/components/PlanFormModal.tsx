@@ -63,7 +63,7 @@ export function PlanFormModal({
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+            className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
           />
         </div>
 
@@ -73,7 +73,7 @@ export function PlanFormModal({
             <select
               value={planType}
               onChange={(e) => setPlanType(e.target.value as 'hourly' | 'monthly')}
-              className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+              className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
             >
               <option value="hourly">Hourly</option>
               <option value="monthly">Monthly (Expiration-based)</option>
@@ -87,7 +87,7 @@ export function PlanFormModal({
               required
               value={priceNaira}
               onChange={(e) => setPriceNaira(Number(e.target.value))}
-              className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+              className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
             />
           </div>
         </div>
@@ -101,7 +101,7 @@ export function PlanFormModal({
                 min={1}
                 value={durationHours}
                 onChange={(e) => setDurationHours(Number(e.target.value))}
-                className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+                className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
               />
             </div>
           ) : (
@@ -112,7 +112,7 @@ export function PlanFormModal({
                 min={1}
                 value={validityDays}
                 onChange={(e) => setValidityDays(Number(e.target.value))}
-                className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+                className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
               />
             </div>
           )}
@@ -123,7 +123,7 @@ export function PlanFormModal({
               min={1}
               value={simultaneousUse}
               onChange={(e) => setSimultaneousUse(Number(e.target.value))}
-              className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+              className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
             />
           </div>
         </div>
@@ -145,7 +145,7 @@ export function PlanFormModal({
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 rounded-btn bg-navy py-3 text-[15px] font-bold text-white disabled:opacity-35"
+            className="flex-1 rounded-btn bg-brand-blue py-3 text-[15px] font-bold text-white transition-colors hover:bg-brand-blue-deep disabled:opacity-35"
           >
             {submitting ? 'Saving…' : 'Save'}
           </button>

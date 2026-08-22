@@ -60,7 +60,7 @@ export function TeamSection({
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
-          className="text-xs font-semibold text-cyan-deep"
+          className="text-xs font-semibold text-brand-blue-deep"
         >
           {showForm ? 'Cancel' : '+ Add admin'}
         </button>
@@ -93,7 +93,7 @@ export function TeamSection({
               type="button"
               disabled={busyId === admin.id}
               onClick={() => handleToggleActive(admin)}
-              className="text-xs font-semibold text-cyan-deep disabled:opacity-40"
+              className="text-xs font-semibold text-brand-blue-deep disabled:opacity-40"
             >
               {admin.active ? 'Disable' : 'Enable'}
             </button>
@@ -116,13 +116,13 @@ export function TeamSection({
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-btn border-[1.5px] border-line px-3 py-2.5 text-sm outline-none focus:border-cyan"
+              className="rounded-btn border-[1.5px] border-line px-3 py-2.5 text-sm outline-none focus:border-brand-blue"
             />
             <input
               placeholder="Name (optional)"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="rounded-btn border-[1.5px] border-line px-3 py-2.5 text-sm outline-none focus:border-cyan"
+              className="rounded-btn border-[1.5px] border-line px-3 py-2.5 text-sm outline-none focus:border-brand-blue"
             />
           </div>
           <input
@@ -132,13 +132,13 @@ export function TeamSection({
             placeholder="Temporary password (min 8 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-btn border-[1.5px] border-line px-3 py-2.5 text-sm outline-none focus:border-cyan"
+            className="rounded-btn border-[1.5px] border-line px-3 py-2.5 text-sm outline-none focus:border-brand-blue"
           />
           {error && <p className="text-sm text-danger">{error}</p>}
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-btn bg-navy py-2.5 text-sm font-bold text-white disabled:opacity-35"
+            className="rounded-btn bg-brand-blue py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-blue-deep disabled:opacity-35"
           >
             {submitting ? 'Creating…' : 'Create admin'}
           </button>

@@ -16,7 +16,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
       <button
         type="button"
         onClick={reset}
-        className="rounded-btn bg-navy px-5 py-3 text-[15px] font-bold text-white"
+        className="rounded-btn bg-brand-blue px-5 py-3 text-[15px] font-bold text-white transition-colors hover:bg-brand-blue-deep"
       >
         Try again
       </button>

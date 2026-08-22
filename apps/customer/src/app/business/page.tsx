@@ -1,8 +1,11 @@
 import { BackLink } from '@/components/BackLink';
+import { BuyShell } from '@/components/BuyShell';
 
 export const metadata = {
   title: 'Business Packages — Shaddai WiFi',
 };
+
+const STARLINK_REFERRAL_URL = 'https://starlink.com/residential?referral=RC-DF-13407982-87554-9';
 
 interface Package {
   name: string;
@@ -42,11 +45,12 @@ export default function BusinessPage() {
   const hasAnyChannel = Boolean(whatsappNumber || supportEmail);
 
   return (
-    <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col gap-5 p-6">
+    <BuyShell>
+    <main className="mx-auto flex w-full max-w-[430px] flex-1 flex-col gap-5 p-6 lg:max-w-3xl lg:flex-none lg:rounded-2xl lg:border lg:border-line lg:bg-surface lg:p-10 lg:shadow-sm">
       <BackLink href="/" label="Back to plans" />
 
       <div>
-        <div className="mb-1 font-mono text-[10.5px] font-bold uppercase tracking-[0.09em] text-cyan-deep">
+        <div className="mb-1 font-mono text-[10.5px] font-bold uppercase tracking-[0.09em] text-brand-blue-deep">
           For businesses
         </div>
         <h1 className="font-display text-2xl font-semibold leading-tight text-ink">
@@ -58,11 +62,11 @@ export default function BusinessPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {PACKAGES.map((pkg) => {
           const message = encodeURIComponent(`Hi, I'm interested in the ${pkg.name} package.`);
           return (
-            <div key={pkg.name} className="rounded-card border-[1.5px] border-line bg-surface p-5">
+            <div key={pkg.name} className="flex flex-col rounded-card border-[1.5px] border-line bg-surface p-5">
               <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-amber">
                 {pkg.eyebrow}
               </div>
@@ -75,7 +79,7 @@ export default function BusinessPage() {
               </ul>
 
               {hasAnyChannel ? (
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex gap-2 lg:mt-auto lg:pt-4">
                   {whatsappNumber && (
                     <a
                       href={`https://wa.me/${whatsappNumber}?text=${message}`}
@@ -103,7 +107,27 @@ export default function BusinessPage() {
             </div>
           );
         })}
+
+        <div className="flex flex-col rounded-card bg-navy p-5 text-white">
+          <div className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-brand-blue-light">
+            Satellite internet
+          </div>
+          <h2 className="font-display text-lg font-semibold">Starlink Installation</h2>
+          <p className="mt-1.5 text-sm text-white/60">
+            Full setup — dish mounting, cable routing, config. Sign up via our referral for 1
+            month free.
+          </p>
+          <a
+            href={STARLINK_REFERRAL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 block rounded-btn bg-brand-blue py-2.5 text-center text-sm font-bold text-white transition-colors hover:bg-brand-blue-deep lg:mt-auto"
+          >
+            Get Starlink installed →
+          </a>
+        </div>
       </div>
     </main>
+    </BuyShell>
   );
 }

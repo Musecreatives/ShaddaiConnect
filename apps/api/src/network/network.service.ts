@@ -15,11 +15,21 @@ export interface DailyUsage {
   totalMb: number;
 }
 
+export interface TopBandwidthUser {
+  code: string;
+  totalMb: number;
+}
+
 export interface NetworkOverview {
   nas: NasRow[];
   dailyUsage: DailyUsage[]; // last 14 days, oldest first
   totalDataAllTimeMb: number;
   cambiumBackhaul: CambiumBackhaulStatus;
+  /** Real all-time usage ranking (radacct octets grouped by voucher code) — not a fabricated
+   * stat, but also not filtered by "this device is still an active customer," so a one-time
+   * heavy trial user can outrank a light but current subscriber. Good enough for "who's using
+   * the most data," not a billing-grade report. */
+  topBandwidthUsers: TopBandwidthUser[];
 }
 
 function startOfDay(daysAgo: number): Date {
@@ -40,7 +50,7 @@ export class NetworkService {
 
   async getOverview(): Promise<NetworkOverview> {
     // Never select `secret` — it's the live RADIUS shared secret (CLAUDE.md: never expose it).
-    const [nas, dailyAggs, totalAgg, cambiumBackhaul] = await Promise.all([
+    const [nas, dailyAggs, totalAgg, cambiumBackhaul, topUsersRaw] = await Promise.all([
       this.prisma.nas.findMany({
         select: { id: true, nasname: true, shortname: true, type: true, description: true },
         orderBy: { id: 'asc' },
@@ -60,6 +70,12 @@ export class NetworkService {
         _sum: { acctInputOctets: true, acctOutputOctets: true },
       }),
       this.cambium.getBackhaulStatus(),
+      this.prisma.radAcct.groupBy({
+        by: ['username'],
+        _sum: { acctInputOctets: true, acctOutputOctets: true },
+        orderBy: { _sum: { acctInputOctets: 'desc' } },
+        take: 5,
+      }),
     ]);
 
     const dailyUsage: DailyUsage[] = dailyAggs.map((agg, i) => {
@@ -71,6 +87,20 @@ export class NetworkService {
     const totalBytes =
       Number(totalAgg._sum.acctInputOctets ?? 0) + Number(totalAgg._sum.acctOutputOctets ?? 0);
 
-    return { nas, dailyUsage, totalDataAllTimeMb: totalBytes / 1_000_000, cambiumBackhaul };
+    const topBandwidthUsers: TopBandwidthUser[] = topUsersRaw
+      .map((row) => ({
+        code: row.username,
+        totalMb:
+          (Number(row._sum.acctInputOctets ?? 0) + Number(row._sum.acctOutputOctets ?? 0)) / 1_000_000,
+      }))
+      .sort((a, b) => b.totalMb - a.totalMb);
+
+    return {
+      nas,
+      dailyUsage,
+      totalDataAllTimeMb: totalBytes / 1_000_000,
+      cambiumBackhaul,
+      topBandwidthUsers,
+    };
   }
 }

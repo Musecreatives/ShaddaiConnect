@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Payment } from '@prisma/client';
 import { EmailService } from '../email/email.service';
 import { voucherTemplate } from '../email/templates/voucher.template';
+import { NtfyService } from '../ntfy/ntfy.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VouchersService } from '../vouchers/vouchers.service';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
@@ -48,6 +49,7 @@ export class PaymentsService {
     private readonly vouchers: VouchersService,
     private readonly config: ConfigService,
     private readonly email: EmailService,
+    private readonly ntfy: NtfyService,
   ) {}
 
   async initialize(dto: InitializePaymentDto) {
@@ -174,6 +176,11 @@ export class PaymentsService {
       this.sendVoucherEmail(result).catch((err) =>
         this.logger.error(`Voucher email dispatch failed for ${reference}: ${err}`),
       );
+      this.ntfy.publish({
+        title: 'Payment received',
+        message: `₦${Number(result.amountNaira).toLocaleString('en-NG')} — ${reference}`,
+        tags: ['moneybag'],
+      });
     }
 
     return result;

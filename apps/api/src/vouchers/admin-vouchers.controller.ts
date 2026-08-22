@@ -10,6 +10,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { CoaService } from '../coa/coa.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateVoucherDto } from './dto/create-voucher.dto';
 import { PatchVoucherDto } from './dto/patch-voucher.dto';
@@ -19,7 +20,10 @@ import { VouchersService } from './vouchers.service';
 @Controller('admin/vouchers')
 @UseGuards(JwtAuthGuard)
 export class AdminVouchersController {
-  constructor(private readonly vouchers: VouchersService) {}
+  constructor(
+    private readonly vouchers: VouchersService,
+    private readonly coa: CoaService,
+  ) {}
 
   @Get()
   findAll(@Query() query: QueryVouchersDto) {
@@ -51,5 +55,13 @@ export class AdminVouchersController {
         if (!dto.additionalDays) throw new BadRequestException('additionalDays is required');
         return this.vouchers.extend(id, dto.additionalDays);
     }
+  }
+
+  /** Live disconnect (RADIUS CoA) — separate from disable, which only stops the *next*
+   * reconnect. Kicks whatever session is open right now for this voucher code, if any. Doesn't
+   * change the voucher's status; the caller decides separately whether to also disable it. */
+  @Post(':code/disconnect')
+  disconnect(@Param('code') code: string) {
+    return this.coa.disconnectVoucher(code);
   }
 }

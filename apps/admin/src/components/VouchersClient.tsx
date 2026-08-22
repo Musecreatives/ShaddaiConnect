@@ -96,11 +96,25 @@ export function VouchersClient({
         <button
           type="button"
           onClick={() => setShowCreate(true)}
-          className="rounded-btn bg-navy px-4 py-2.5 text-sm font-bold text-white"
+          className="hidden rounded-btn bg-brand-blue px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-blue-deep sm:block"
         >
           + New voucher batch
         </button>
       </div>
+
+      {/* FAB — the header button is hidden below sm since "+ New voucher batch" doesn't fit
+          next to the title on a phone screen. */}
+      <button
+        type="button"
+        onClick={() => setShowCreate(true)}
+        aria-label="New voucher batch"
+        className="fixed bottom-[calc(70px+env(safe-area-inset-bottom))] right-5 z-20 flex h-12 w-12 items-center justify-center rounded-2xl bg-navy text-white shadow-lg sm:hidden"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </button>
 
       <div className="flex gap-2">
         {['', 'unused', 'active', 'expired', 'disabled'].map((status) => (
@@ -110,7 +124,7 @@ export function VouchersClient({
             onClick={() => handleFilterChange(status)}
             className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
               statusFilter === status
-                ? 'border-cyan bg-cyan-tint text-cyan-deep'
+                ? 'border-brand-blue bg-brand-blue-light/20 text-brand-blue-deep'
                 : 'border-line text-muted'
             }`}
           >
@@ -125,7 +139,51 @@ export function VouchersClient({
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+      {/* Card list below sm — a table with 6 columns doesn't fit a phone screen usefully. */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        {vouchers.map((voucher) => (
+          <div
+            key={voucher.id}
+            className="flex items-center justify-between rounded-card border border-line bg-surface px-4 py-3"
+          >
+            <div className="min-w-0">
+              <div className="font-mono text-[13px] font-semibold text-ink">{voucher.code}</div>
+              <div className="mt-0.5 truncate text-[11px] text-muted">
+                {voucher.plan.name} · {formatDate(voucher.createdAt)}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Badge status={voucher.status} />
+              {voucher.status === 'disabled' ? (
+                <button
+                  type="button"
+                  disabled={busyId === voucher.id}
+                  onClick={() => handleAction(voucher.id, 'enable')}
+                  className="text-[11px] font-semibold text-brand-blue-deep disabled:opacity-40"
+                >
+                  Enable
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busyId === voucher.id}
+                  onClick={() => handleAction(voucher.id, 'disable')}
+                  className="text-[11px] font-semibold text-danger disabled:opacity-40"
+                >
+                  Disable
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {vouchers.length === 0 && (
+          <div className="rounded-card border border-line bg-surface px-4 py-8 text-center text-sm text-muted">
+            No vouchers match this filter.
+          </div>
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-card border border-line bg-surface sm:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
@@ -154,7 +212,7 @@ export function VouchersClient({
                         type="button"
                         disabled={busyId === voucher.id}
                         onClick={() => handleExtend(voucher.id)}
-                        className="text-xs font-semibold text-cyan-deep disabled:opacity-40"
+                        className="text-xs font-semibold text-brand-blue-deep disabled:opacity-40"
                       >
                         Extend
                       </button>
@@ -164,7 +222,7 @@ export function VouchersClient({
                         type="button"
                         disabled={busyId === voucher.id}
                         onClick={() => handleAction(voucher.id, 'enable')}
-                        className="text-xs font-semibold text-cyan-deep disabled:opacity-40"
+                        className="text-xs font-semibold text-brand-blue-deep disabled:opacity-40"
                       >
                         Enable
                       </button>

@@ -73,7 +73,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${fontVariables} h-full antialiased`}>
-      <body className="flex min-h-full flex-col bg-page font-sans text-ink">
+      <body className="flex min-h-full flex-col bg-page-dark font-sans text-white">
         {children}
         <script
           type="application/ld+json"

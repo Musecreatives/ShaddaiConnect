@@ -11,7 +11,7 @@ export function CoverageNotice({
 }) {
   return (
     <div className="rounded-card border border-line bg-surface p-4">
-      <div className="mb-1.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.09em] text-cyan-deep">
+      <div className="mb-1.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.09em] text-brand-blue-deep">
         Before you buy
       </div>
       <p className="text-sm text-ink">
@@ -40,7 +40,7 @@ export function CoverageNotice({
           type="checkbox"
           checked={confirmed}
           onChange={(e) => onChange(e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-cyan-deep"
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-brand-blue-deep"
         />
         I can see &quot;Shaddai WiFi&quot; on my device and I&apos;m within the coverage area
         above.

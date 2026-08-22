@@ -4,11 +4,14 @@ import type {
   AdminSettings,
   AdminStats,
   AdminUserRow,
+  BlockedMac,
   CustomerRow,
   FraudSignal,
   NetworkOverview,
   Plan,
   SessionRow,
+  SupportTicket,
+  TrialFeedbackRow,
   Voucher,
   WaitlistRow,
 } from './api';
@@ -70,4 +73,16 @@ export function getFraudSignalsServer(): Promise<FraudSignal[]> {
 
 export function getWaitlistServer(): Promise<WaitlistRow[]> {
   return serverFetch('/admin/waitlist');
+}
+
+export function getTrialFeedbackServer(): Promise<TrialFeedbackRow[]> {
+  return serverFetch('/admin/trial-feedback');
+}
+
+export function getSupportTicketsServer(): Promise<SupportTicket[]> {
+  return serverFetch('/admin/support-tickets');
+}
+
+export function getBlockedMacsServer(): Promise<BlockedMac[]> {
+  return serverFetch('/admin/blocked-macs');
 }

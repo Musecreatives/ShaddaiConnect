@@ -102,6 +102,28 @@ function SupportIcon() {
   );
 }
 
+function FeedbackIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 2.5L14.5 8.6L21 9.3L16 13.6L17.5 20L12 16.6L6.5 20L8 13.6L3 9.3L9.5 8.6L12 2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function BlocklistIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M5.5 5.5L18.5 18.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function SettingsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -132,21 +154,41 @@ const NAV_GROUPS = [
     items: [
       { href: '/customers', label: 'Customers', Icon: CustomersIcon },
       { href: '/waitlist', label: 'Waitlist', Icon: CustomersIcon },
+      { href: '/trial-feedback', label: 'Trial Feedback', Icon: FeedbackIcon },
       { href: '/network', label: 'Network / Usage', Icon: NetworkIcon },
+      { href: '/blocklist', label: 'Blocklist', Icon: BlocklistIcon },
       { href: '/support', label: 'Support', Icon: SupportIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },
     ],
   },
 ] as const;
 
-export function Sidebar() {
+export function Sidebar({
+  mobileOpen = false,
+  onClose,
+}: {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex h-full w-56 shrink-0 flex-col gap-1 overflow-y-auto bg-navy p-4">
+    <nav
+      className={`fixed inset-y-0 left-0 z-50 flex h-full w-56 shrink-0 flex-col gap-1 overflow-y-auto bg-navy p-4 transition-transform duration-200 md:static md:translate-x-0 ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
       <div className="mb-5 flex items-center gap-2.5 px-2">
         <Image src="/logo.png" alt="Shaddai" width={30} height={30} className="shrink-0" />
         <span className="font-display text-[14px] font-bold text-white">Shaddai Admin</span>
+        <button
+          type="button"
+          onClick={onClose}
+          className="ml-auto text-lg leading-none text-white/50 md:hidden"
+          aria-label="Close menu"
+        >
+          ✕
+        </button>
       </div>
 
       {NAV_GROUPS.map((group) => (
@@ -160,9 +202,10 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onClose}
                 className={`flex items-center gap-2.5 rounded-[9px] border-l-[3px] px-3 py-2.5 text-[13.5px] font-medium transition-colors ${
                   active
-                    ? 'border-cyan bg-navy-2 text-white'
+                    ? 'border-brand-blue bg-navy-2 text-white'
                     : 'border-transparent text-white/60 hover:bg-navy-2 hover:text-white'
                 }`}
               >

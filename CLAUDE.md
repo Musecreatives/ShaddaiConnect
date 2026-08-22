@@ -83,5 +83,5 @@ only infra dependency is MariaDB via the documented SSH tunnel.
 
 - Do not modify the FreeRADIUS or MariaDB container configs from this repo — infra is managed on the server (`~/shaddai-billing`).
 - Do not write to `radacct` (FreeRADIUS owns it; API reads only).
-- Do not use MAC addresses for enforcement (Simultaneous-Use is the mechanism; MACs are analytics).
+- Do not use MAC addresses for enforcement (Simultaneous-Use is the mechanism; MACs are analytics). **One scoped exception** (added 2026-08-06, user-approved): `VoucherActivationService.blockRepeatTrialDevices` disables a newly-activated **Free Trial** voucher if its device's MAC already appears on an earlier Free Trial voucher's session history — an anti-abuse guard for the free-trial flow specifically, not general concurrent-use enforcement. Nowhere else in the codebase should use MAC for auth/access decisions.
 - Do not put the Paystack secret key, DB passwords, or RADIUS shared secret in code or docs.

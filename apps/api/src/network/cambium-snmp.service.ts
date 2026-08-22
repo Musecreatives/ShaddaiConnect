@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as snmp from 'net-snmp';
 
 export interface CambiumBackhaulStatus {
+  configured: boolean;
   rssiDbm: number | null;
   connectionStatus: string | null;
   ssid: string | null;
@@ -39,7 +40,7 @@ export class CambiumSnmpService {
 
   async getBackhaulStatus(): Promise<CambiumBackhaulStatus> {
     if (!this.enabled) {
-      return { rssiDbm: null, connectionStatus: null, ssid: null };
+      return { configured: false, rssiDbm: null, connectionStatus: null, ssid: null };
     }
 
     const session = snmp.createSession(this.host!, this.community, { timeout: 3000 });
@@ -59,13 +60,14 @@ export class CambiumSnmpService {
         !vb || snmp.isVarbindError(vb);
 
       return {
+        configured: true,
         rssiDbm: isError(rssi) ? null : Number(rssi.value),
         connectionStatus: isError(status) ? null : String(status.value),
         ssid: isError(ssid) ? null : String(ssid.value),
       };
     } catch (err) {
       this.logger.warn(`Cambium SNMP query failed: ${(err as Error).message}`);
-      return { rssiDbm: null, connectionStatus: null, ssid: null };
+      return { configured: true, rssiDbm: null, connectionStatus: null, ssid: null };
     } finally {
       session.close();
     }

@@ -32,7 +32,7 @@ export function NotifyWaitlistButton({ pendingCount }: { pendingCount: number })
         type="button"
         onClick={handleClick}
         disabled={loading || pendingCount === 0}
-        className="rounded-btn bg-navy px-4 py-2.5 text-sm font-bold text-white disabled:opacity-35"
+        className="rounded-btn bg-brand-blue px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-blue-deep disabled:opacity-35"
       >
         {loading ? 'Sending…' : `Notify launch (${pendingCount})`}
       </button>

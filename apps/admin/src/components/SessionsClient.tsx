@@ -2,7 +2,7 @@
 
 import { SignalMeter } from '@shaddai/ui';
 import { useEffect, useState } from 'react';
-import { getSessions, type SessionRow } from '@/lib/api';
+import { ApiError, blockMac, disconnectVoucher, getSessions, type SessionRow } from '@/lib/api';
 
 const LIVE_REFRESH_MS = 10_000;
 
@@ -39,6 +39,45 @@ export function SessionsClient({
   const [view, setView] = useState<'live' | 'all'>('live');
   const [sessions, setSessions] = useState(initialSessions);
   const [total, setTotal] = useState(initialTotal);
+  const [blockingMac, setBlockingMac] = useState<string | null>(null);
+  const [blockedMacs, setBlockedMacs] = useState<Set<string>>(new Set());
+  const [disconnectingCode, setDisconnectingCode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function handleBlock(mac: string) {
+    if (!window.confirm(`Block device ${mac}? This disables any voucher it's used, on any plan.`)) {
+      return;
+    }
+    setBlockingMac(mac);
+    setError(null);
+    try {
+      await blockMac(mac);
+      setBlockedMacs((prev) => new Set(prev).add(mac.toLowerCase()));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : `Could not block ${mac}.`);
+    } finally {
+      setBlockingMac(null);
+    }
+  }
+
+  async function handleDisconnect(code: string) {
+    setDisconnectingCode(code);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await disconnectVoucher(code);
+      if (result.success) {
+        setNotice(result.message);
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : `Could not disconnect ${code}.`);
+    } finally {
+      setDisconnectingCode(null);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -81,7 +120,7 @@ export function SessionsClient({
               type="button"
               onClick={() => setView(v)}
               className={`rounded-full border px-3 py-1.5 text-xs font-semibold capitalize ${
-                view === v ? 'border-cyan bg-cyan-tint text-cyan-deep' : 'border-line text-muted'
+                view === v ? 'border-brand-blue bg-brand-blue-light/20 text-brand-blue-deep' : 'border-line text-muted'
               }`}
             >
               {v === 'live' ? 'Live' : 'History'}
@@ -89,6 +128,17 @@ export function SessionsClient({
           ))}
         </div>
       </div>
+
+      {notice && (
+        <p className="rounded-card border border-success/30 bg-success-tint px-4 py-3 text-sm text-success">
+          {notice}
+        </p>
+      )}
+      {error && (
+        <p className="rounded-card border border-danger/30 bg-danger-tint px-4 py-3 text-sm text-danger">
+          {error}
+        </p>
+      )}
 
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full text-left text-sm">
@@ -102,35 +152,67 @@ export function SessionsClient({
               <th className="px-4 py-3 font-semibold">Down / Up</th>
               <th className="px-4 py-3 font-semibold">AP</th>
               <th className="px-4 py-3 font-semibold">Signal</th>
+              <th className="px-4 py-3 font-semibold" />
             </tr>
           </thead>
           <tbody>
-            {sessions.map((session) => (
-              <tr key={session.id} className="border-b border-line last:border-0">
-                <td className="px-4 py-3 font-mono">{session.username}</td>
-                <td className="px-4 py-3 font-mono text-muted">{session.macAddress || '—'}</td>
-                <td className="px-4 py-3 font-mono text-muted">{session.ipAddress || '—'}</td>
-                <td className="px-4 py-3 text-muted">{formatDate(session.startedAt)}</td>
-                <td className="px-4 py-3 font-mono text-muted">
-                  {formatDuration(session.durationSeconds)}
-                </td>
-                <td className="px-4 py-3 text-muted">
-                  {formatBytes(session.downloadBytes)} / {formatBytes(session.uploadBytes)}
-                </td>
-                <td className="px-4 py-3 text-muted">{session.apName ?? '—'}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <SignalMeter live={session.live} />
-                    {session.signalRssi !== null && (
-                      <span className="font-mono text-xs text-muted">{session.signalRssi} dBm</span>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {sessions.map((session) => {
+              const mac = session.macAddress?.toLowerCase();
+              const isBlocked = mac && blockedMacs.has(mac);
+              return (
+                <tr key={session.id} className="border-b border-line last:border-0">
+                  <td className="px-4 py-3 font-mono">{session.username}</td>
+                  <td className="px-4 py-3 font-mono text-muted">{session.macAddress || '—'}</td>
+                  <td className="px-4 py-3 font-mono text-muted">{session.ipAddress || '—'}</td>
+                  <td className="px-4 py-3 text-muted">{formatDate(session.startedAt)}</td>
+                  <td className="px-4 py-3 font-mono text-muted">
+                    {formatDuration(session.durationSeconds)}
+                  </td>
+                  <td className="px-4 py-3 text-muted">
+                    {formatBytes(session.downloadBytes)} / {formatBytes(session.uploadBytes)}
+                  </td>
+                  <td className="px-4 py-3 text-muted">{session.apName ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <SignalMeter live={session.live} />
+                      {session.signalRssi !== null && (
+                        <span className="font-mono text-xs text-muted">{session.signalRssi} dBm</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      {session.live && (
+                        <button
+                          type="button"
+                          disabled={disconnectingCode === session.username}
+                          onClick={() => handleDisconnect(session.username)}
+                          className="text-xs font-semibold text-amber disabled:opacity-40"
+                        >
+                          {disconnectingCode === session.username ? 'Disconnecting…' : 'Disconnect now'}
+                        </button>
+                      )}
+                      {session.macAddress &&
+                        (isBlocked ? (
+                          <span className="text-xs font-semibold text-danger">Blocked</span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={blockingMac === session.macAddress}
+                            onClick={() => handleBlock(session.macAddress)}
+                            className="text-xs font-semibold text-danger disabled:opacity-40"
+                          >
+                            Block device
+                          </button>
+                        ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {sessions.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-sm text-muted">
+                <td colSpan={9} className="px-4 py-8 text-center text-sm text-muted">
                   {view === 'live' ? 'No devices connected right now.' : 'No session history yet.'}
                 </td>
               </tr>

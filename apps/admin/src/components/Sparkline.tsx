@@ -5,7 +5,7 @@ export function Sparkline({ values }: { values: number[] }) {
       {values.map((v, i) => (
         <span
           key={i}
-          className="w-1.5 rounded-[1px] bg-cyan"
+          className="w-1.5 rounded-[1px] bg-brand-blue"
           style={{ height: `${Math.max(8, (v / max) * 100)}%` }}
         />
       ))}

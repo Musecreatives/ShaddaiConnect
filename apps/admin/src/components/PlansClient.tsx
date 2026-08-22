@@ -48,7 +48,7 @@ export function PlansClient({ initialPlans }: { initialPlans: Plan[] }) {
         <button
           type="button"
           onClick={() => setEditing('new')}
-          className="rounded-btn bg-navy px-4 py-2.5 text-sm font-bold text-white"
+          className="rounded-btn bg-brand-blue px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-blue-deep"
         >
           + Add plan
         </button>
@@ -93,7 +93,7 @@ export function PlansClient({ initialPlans }: { initialPlans: Plan[] }) {
                     <button
                       type="button"
                       onClick={() => setEditing(plan)}
-                      className="text-xs font-semibold text-cyan-deep"
+                      className="text-xs font-semibold text-brand-blue-deep"
                     >
                       Edit
                     </button>

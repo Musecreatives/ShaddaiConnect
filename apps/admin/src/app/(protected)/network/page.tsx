@@ -8,6 +8,9 @@ export default async function NetworkPage() {
   const { nas, dailyUsage, totalDataAllTimeMb, cambiumBackhaul } = await getNetworkOverviewServer();
   const maxMb = Math.max(...dailyUsage.map((d) => d.totalMb), 1);
 
+  const cambiumOk = cambiumBackhaul.rssiDbm !== null && cambiumBackhaul.rssiDbm >= -65;
+  const cambiumWarn = cambiumBackhaul.rssiDbm !== null && cambiumBackhaul.rssiDbm >= -75 && !cambiumOk;
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -20,39 +23,76 @@ export default async function NetworkPage() {
         </p>
       </div>
 
-      <div className="rounded-card border border-line bg-surface p-5">
-        <h2 className="mb-3 font-display text-sm font-semibold text-ink">
-          Cambium backhaul link
-        </h2>
-        {cambiumBackhaul.rssiDbm === null ? (
-          <p className="text-sm text-muted">Not configured — set CAMBIUM_SNMP_HOST to enable.</p>
-        ) : (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-            <span>
-              <span className="text-muted">Signal: </span>
-              <span
-                className={`font-mono font-semibold ${
-                  cambiumBackhaul.rssiDbm >= -65
-                    ? 'text-success'
-                    : cambiumBackhaul.rssiDbm >= -75
-                      ? 'text-amber'
-                      : 'text-danger'
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-card border border-line bg-surface p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Cambium backhaul
+            </span>
+            <span
+              className={`h-2 w-2 rounded-full ${
+                !cambiumBackhaul.configured
+                  ? 'bg-line'
+                  : cambiumBackhaul.rssiDbm === null
+                    ? 'bg-danger'
+                    : cambiumOk
+                      ? 'bg-success'
+                      : cambiumWarn
+                        ? 'bg-amber'
+                        : 'bg-danger'
+              }`}
+            />
+          </div>
+          {!cambiumBackhaul.configured ? (
+            <p className="mt-2 text-sm text-muted">Not configured</p>
+          ) : cambiumBackhaul.rssiDbm === null ? (
+            <p className="mt-2 text-sm text-amber">Configured, but unreachable</p>
+          ) : (
+            <>
+              <p
+                className={`mt-2 font-mono text-2xl font-bold ${
+                  cambiumOk ? 'text-success' : cambiumWarn ? 'text-amber' : 'text-danger'
                 }`}
               >
                 {cambiumBackhaul.rssiDbm} dBm
-              </span>
+              </p>
+              <p className="mt-1 text-xs text-muted">{cambiumBackhaul.connectionStatus ?? '—'}</p>
+            </>
+          )}
+        </div>
+
+        <div className="rounded-card border border-line bg-surface p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Access points
             </span>
-            <span>
-              <span className="text-muted">Status: </span>
-              <span className="font-semibold text-ink">{cambiumBackhaul.connectionStatus ?? '—'}</span>
-            </span>
-            <span>
-              <span className="text-muted">SSID: </span>
-              <span className="font-mono text-ink">{cambiumBackhaul.ssid ?? '—'}</span>
+            <span className={`h-2 w-2 rounded-full ${nas.length > 0 ? 'bg-success' : 'bg-line'}`} />
+          </div>
+          <p className="mt-2 font-mono text-2xl font-bold text-ink">{nas.length}</p>
+          <p className="mt-1 text-xs text-muted">RADIUS clients configured</p>
+        </div>
+
+        <div className="rounded-card border border-line bg-surface p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Data, all-time
             </span>
           </div>
-        )}
+          <p className="mt-2 font-mono text-2xl font-bold text-ink">
+            {totalDataAllTimeMb >= 1000
+              ? `${(totalDataAllTimeMb / 1000).toFixed(1)} GB`
+              : `${totalDataAllTimeMb.toFixed(1)} MB`}
+          </p>
+          <p className="mt-1 text-xs text-muted">Transferred across all sessions</p>
+        </div>
       </div>
+
+      {cambiumBackhaul.rssiDbm !== null && cambiumBackhaul.ssid && (
+        <div className="rounded-card border border-line bg-surface px-5 py-3 text-sm">
+          <span className="text-muted">SSID: </span>
+          <span className="font-mono text-ink">{cambiumBackhaul.ssid}</span>
+        </div>
+      )}
 
       <div className="rounded-card border border-line bg-surface p-5">
         <h2 className="mb-4 font-display text-sm font-semibold text-ink">
@@ -63,7 +103,7 @@ export default async function NetworkPage() {
             <div key={day.date} className="flex flex-1 flex-col items-center gap-1.5">
               <div className="flex h-24 w-full items-end">
                 <div
-                  className="w-full rounded-t-[3px] bg-cyan"
+                  className="w-full rounded-t-[3px] bg-brand-blue"
                   style={{ height: `${Math.max(4, (day.totalMb / maxMb) * 100)}%` }}
                   title={`${day.totalMb.toFixed(1)} MB`}
                 />

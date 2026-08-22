@@ -168,17 +168,42 @@ export class VouchersService {
     // Read-only check for the captive portal's pre-flight validation (before it even attempts
     // RADIUS auth) — an open radacct row (acctStopTime null) means this code is currently
     // connected somewhere; combined with Simultaneous-Use=1 that's why a second login would fail.
+    // Also doubles as the live session-details source for the customer app's active-session view
+    // (IP, data used) — same read-only radacct access as everywhere else in this codebase.
     const openSession = await this.prisma.radAcct.findFirst({
       where: { username: code, acctStopTime: null },
-      select: { radAcctId: true },
+      select: { radAcctId: true, framedIpAddress: true, acctInputOctets: true, acctOutputOctets: true },
+      orderBy: { acctStartTime: 'desc' },
     });
+
+    // Hourly plans (incl. the free trial) don't set vouchers.expiresAt — their real duration
+    // lives in radreply's Session-Timeout instead (see issueInTx). Surfacing it here lets the
+    // customer app show a real countdown once activatedAt is known, without guessing.
+    let sessionTimeoutSeconds: number | null = null;
+    if (voucher.plan.planType === 'hourly') {
+      const sessionTimeout = await this.prisma.radReply.findFirst({
+        where: { username: code, attribute: 'Session-Timeout' },
+        select: { value: true },
+      });
+      sessionTimeoutSeconds = sessionTimeout ? Number(sessionTimeout.value) : null;
+    }
 
     return {
       code: voucher.code,
       status: voucher.status,
       planName: voucher.plan.name,
       expiresAt: voucher.expiresAt,
+      activatedAt: voucher.activatedAt,
+      sessionTimeoutSeconds,
       connectedElsewhere: !!openSession,
+      currentSession: openSession
+        ? {
+            ipAddress: openSession.framedIpAddress || null,
+            dataUsedMb:
+              (Number(openSession.acctInputOctets ?? 0) + Number(openSession.acctOutputOctets ?? 0)) /
+              1_000_000,
+          }
+        : null,
     };
   }
 

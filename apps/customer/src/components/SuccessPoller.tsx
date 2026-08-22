@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getPaymentStatus, type PaymentStatus } from '@/lib/api';
 import { formatExpiry } from '@/lib/format';
+import { SessionTimer } from './SessionTimer';
 import { VoucherQr } from './VoucherQr';
 
 const POLL_INTERVAL_MS = 2500;
@@ -50,7 +51,7 @@ export function SuccessPoller({ reference }: { reference: string }) {
             Paystack
           </span>
         </div>
-        <div className="mt-4 h-9 w-9 animate-spin rounded-full border-[3px] border-line border-t-cyan" />
+        <div className="mt-4 h-9 w-9 animate-spin rounded-full border-[3px] border-line border-t-brand-blue" />
         <p className="mt-2 text-sm text-muted">
           {status.amountNaira > 0
             ? `Confirming your payment of ₦${status.amountNaira.toLocaleString('en-NG')}…`
@@ -91,6 +92,8 @@ export function SuccessPoller({ reference }: { reference: string }) {
         qrSlot={<VoucherQr value={code} />}
       />
 
+      <SessionTimer voucherCode={code} />
+
       <button
         type="button"
         onClick={() => {
@@ -98,7 +101,7 @@ export function SuccessPoller({ reference }: { reference: string }) {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
         }}
-        className="w-full rounded-btn border-[1.5px] border-line py-3 text-[15px] font-bold text-ink transition-colors hover:border-cyan"
+        className="w-full rounded-btn border-[1.5px] border-line py-3 text-[15px] font-bold text-ink transition-colors hover:border-brand-blue"
       >
         {copied ? 'Copied!' : 'Copy code'}
       </button>

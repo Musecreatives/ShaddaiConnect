@@ -86,7 +86,11 @@ export class SessionsService {
       durationSeconds = Math.max(0, Math.floor((end.getTime() - row.acctStartTime.getTime()) / 1000));
     }
 
-    const omadaMatch = omadaByMac.get(normalizeMac(row.callingStationId));
+    // Omada only reports currently-online clients — there's no historical AP/RSSI store. Only
+    // attach a match to still-open sessions; a stopped session showing "live" signal data just
+    // because that MAC happens to be online again right now (a different, later connection) is
+    // misleading, not a real reading of what that past session actually experienced.
+    const omadaMatch = live ? omadaByMac.get(normalizeMac(row.callingStationId)) : undefined;
 
     return {
       id: row.acctUniqueId,

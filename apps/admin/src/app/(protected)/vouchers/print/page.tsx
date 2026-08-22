@@ -37,7 +37,7 @@ export default function PrintBatchPage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="rounded-btn bg-navy px-4 py-2.5 text-sm font-bold text-white"
+            className="rounded-btn bg-brand-blue px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-blue-deep"
           >
             Print
           </button>

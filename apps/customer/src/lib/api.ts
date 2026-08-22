@@ -34,6 +34,22 @@ export interface VoucherStatus {
   status: 'unused' | 'active' | 'expired' | 'disabled';
   planName: string;
   expiresAt: string | null;
+  activatedAt: string | null;
+  sessionTimeoutSeconds: number | null;
+  connectedElsewhere: boolean;
+  currentSession: { ipAddress: string | null; dataUsedMb: number } | null;
+}
+
+export interface VoucherNotification {
+  id: number;
+  voucherCode: string;
+  title: string;
+  body: string;
+  sentAt: string;
+}
+
+export function getVoucherNotifications(code: string): Promise<VoucherNotification[]> {
+  return apiFetch(`/vouchers/${encodeURIComponent(code)}/notifications`);
 }
 
 class ApiError extends Error {
@@ -83,10 +99,31 @@ export function getVoucherStatus(code: string): Promise<VoucherStatus> {
   return apiFetch<VoucherStatus>(`/vouchers/${encodeURIComponent(code)}/status`);
 }
 
-export function claimTrial(phone: string): Promise<{ code: string }> {
-  return apiFetch<{ code: string }>('/trial', {
+export interface PushSubscriptionInput {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+  voucherCode?: string;
+}
+
+export function subscribePush(input: PushSubscriptionInput): Promise<{ subscribed: true }> {
+  return apiFetch('/push/subscribe', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export interface RequestTrialCodeInput {
+  fullName: string;
+  email: string;
+  phone: string;
+  locationNote: string;
+}
+
+export function requestTrialCode(input: RequestTrialCodeInput): Promise<{ sent: true }> {
+  return apiFetch('/trial/request-code', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function verifyTrialCode(email: string, code: string): Promise<{ code: string }> {
+  return apiFetch('/trial/verify-code', {
     method: 'POST',
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ email, code }),
   });
 }
 
@@ -135,6 +172,20 @@ export function sendSupportContact(input: {
   message: string;
 }): Promise<{ sent: true }> {
   return apiFetch<{ sent: true }>('/support/contact', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export interface TrialFeedbackInput {
+  signalQuality?: 'excellent' | 'good' | 'weak' | 'no_connection';
+  wouldBuy?: 'yes' | 'maybe' | 'no';
+  locationNote?: string;
+  comments?: string;
+}
+
+export function submitTrialFeedback(code: string, input: TrialFeedbackInput): Promise<{ submitted: true }> {
+  return apiFetch<{ submitted: true }>(`/trial/feedback/${encodeURIComponent(code)}`, {
     method: 'POST',
     body: JSON.stringify(input),
   });

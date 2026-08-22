@@ -43,7 +43,7 @@ export function SupportContactForm() {
         onChange={(e) => setName(e.target.value)}
         placeholder="Your name"
         required
-        className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+        className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
       />
       <input
         type="email"
@@ -51,7 +51,7 @@ export function SupportContactForm() {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Your email"
         required
-        className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+        className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
       />
       <textarea
         value={message}
@@ -59,7 +59,7 @@ export function SupportContactForm() {
         placeholder="How can we help?"
         required
         rows={4}
-        className="rounded-card border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-cyan"
+        className="rounded-card border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
       />
       <button
         type="submit"

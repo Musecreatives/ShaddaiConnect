@@ -21,6 +21,10 @@ export class AdminSettingsController {
         'http://localhost:3001',
         'http://localhost:3002',
       ],
+      // Booleans only — never the topic/URL itself, which is the closest thing ntfy has to a
+      // shared secret (anyone who knows it can post to or read the admin alert feed).
+      ntfyConfigured: Boolean(this.config.get('NTFY_URL') && this.config.get('NTFY_TOPIC')),
+      pushConfigured: Boolean(this.config.get('VAPID_PUBLIC_KEY') && this.config.get('VAPID_PRIVATE_KEY')),
     };
   }
 }

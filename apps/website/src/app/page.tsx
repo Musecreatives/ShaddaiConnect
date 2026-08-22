@@ -1,99 +1,31 @@
-import Image from 'next/image';
+import Link from 'next/link';
 import { FaqAccordion } from '@/components/FaqAccordion';
-import { StarlinkPromo } from '@/components/StarlinkPromo';
+import { SiteFooter } from '@/components/SiteFooter';
+import { SiteHeader } from '@/components/SiteHeader';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { getPublicPlans, type Plan } from '@/lib/api';
 import { formatPlanMeta } from '@/lib/format';
 import { COVERAGE_AREAS, COVERAGE_LANDMARKS } from '@/lib/coverage';
 
 const BUY_URL = process.env.NEXT_PUBLIC_BUY_URL ?? 'https://buy.shaddaicommunications.com';
-const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
-const SUPPORT_EMAIL = 'support@shaddaicommunications.com';
 
 const SERVICES = [
-  {
-    title: 'Website design & development',
-    body: 'A professional website for your shop, school, or business — built and hosted for you, no technical know-how needed.',
-    quoteMessage: "Hi, I'd like a quote for a website for my business.",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M3 9H21" stroke="currentColor" strokeWidth="1.8" />
-        <circle cx="6.5" cy="6.5" r="0.75" fill="currentColor" />
-        <circle cx="9" cy="6.5" r="0.75" fill="currentColor" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Point of Sale (POS) portal',
-    body: 'A simple digital till for tracking sales, stock, and daily takings — built for shops and small businesses around the estate.',
-    quoteMessage: "Hi, I'd like a quote for a POS portal for my business.",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect x="4" y="3" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M9 21H15M12 15V21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M8 8H16M8 11H13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    ),
-  },
+  { slug: 'wifi', title: 'Community WiFi' },
+  { slug: 'starlink', title: 'Starlink Installation' },
+  { slug: 'cctv', title: 'CCTV Installation' },
+  { slug: 'brand-identity', title: 'Brand Identity' },
+  { slug: 'website-development', title: 'Website Development' },
+  { slug: 'software-development', title: 'Software Development' },
+  { slug: 'pos', title: 'POS & Business Tools' },
 ];
 
 const STEPS = [
-  {
-    title: 'Join the waitlist',
-    body: 'Tell us your street or nearest landmark — takes ten seconds.',
-  },
-  {
-    title: 'We reach your street',
-    body: "We're expanding block by block. You'll get an email the moment we're live near you.",
-  },
-  {
-    title: 'Buy a voucher & connect',
-    body: "Grab a time-based voucher, enter the code on the WiFi login page, and you're online.",
-  },
-];
-
-const WHY = [
-  {
-    title: 'Pay as you go',
-    body: 'Hourly and monthly vouchers — pay only for the time you need, no lock-in contract.',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M3 10H21" stroke="currentColor" strokeWidth="1.8" />
-        <circle cx="17" cy="14.5" r="1.4" fill="currentColor" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Instant activation',
-    body: 'Vouchers activate the moment payment clears. No app to install, no account to create.',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M13 2L4 14H11L10 22L20 9H13L13 2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Built for the estate',
-    body: 'A local community network, not a national ISP — support that actually knows your street.',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 21C16 17 19 13.4 19 9.5C19 5.9 15.9 3 12 3C8.1 3 5 5.9 5 9.5C5 13.4 8 17 12 21Z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-        <circle cx="12" cy="9.5" r="2.3" stroke="currentColor" strokeWidth="1.8" />
-      </svg>
-    ),
-  },
+  { title: 'Tell us what you need', body: 'WiFi, a website, CCTV, custom software — pick a service and reach out.' },
+  { title: 'We scope it for your setup', body: 'A quick chat or site visit, then real pricing — no guessing, no surprises.' },
+  { title: 'We deliver, locally', body: 'One local team you can actually reach, not a call centre in another city.' },
 ];
 
 export default async function Home() {
-  // Server Component fetch — real plan pricing on a marketing page beats hardcoded numbers that
-  // drift out of date, but this page must still render fine if the API is briefly unreachable.
   let plans: Plan[] = [];
   try {
     plans = (await getPublicPlans()).filter((p) => p.active);
@@ -103,216 +35,190 @@ export default async function Home() {
   const previewPlans = plans.slice(0, 3);
 
   return (
-    <main className="flex flex-1 flex-col">
-      <div className="bg-page-dark">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 pb-4 pt-8">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Shaddai Communications" width={40} height={40} className="shrink-0" />
-            <div>
-              <div className="font-display text-[15px] font-bold text-white">Shaddai Communications</div>
-              <div className="text-[11px] text-white/60">Ugbowo BDPA Estate, Benin City</div>
-            </div>
+    <main className="flex flex-1 flex-col bg-page-dark text-white">
+      <SiteHeader />
+
+      {/* Hero — massive type with side stats, per 1c */}
+      <section className="grid gap-12 px-6 py-20 sm:grid-cols-[1fr_auto] sm:items-end sm:px-16 sm:py-28">
+        <div>
+          <div className="mb-6 flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-success">
+            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+            Live in Ugbowo BDPA Estate
+          </div>
+          <h1 className="max-w-xl font-display text-5xl font-bold leading-[1.02] tracking-tight text-white sm:text-6xl">
+            Everything your home and business runs on.
+          </h1>
+          <p className="mt-6 max-w-md text-[17px] leading-relaxed text-white/45">
+            WiFi, satellite internet, CCTV, and the digital tools you need — one local team, no
+            contracts, no runaround.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link
+              href="/services"
+              className="rounded-btn bg-brand-blue px-8 py-4 text-[15px] font-bold text-white transition-colors hover:bg-brand-blue-deep"
+            >
+              See all services →
+            </Link>
+            <a
+              href={BUY_URL}
+              className="rounded-btn border border-line-dark px-8 py-4 text-[15px] font-medium text-white/70 transition-colors hover:border-white/30 hover:text-white"
+            >
+              Buy a WiFi voucher
+            </a>
           </div>
         </div>
-
-        <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-8 px-6 py-10 text-center sm:py-16">
-          <div className="animate-fade-slide-in flex flex-col items-center gap-4">
-            <div className="font-mono text-[11px] font-bold uppercase tracking-[0.09em] text-brand-blue-light">
-              We&apos;re live
-            </div>
-            <h1 className="max-w-2xl font-display text-3xl font-semibold leading-tight text-white sm:text-4xl">
-              Fast, affordable community WiFi for Ugbowo BDPA Estate
-            </h1>
-            <p className="max-w-xl text-[15px] text-white/70 sm:text-base">
-              Shaddai Comm Ventures WiFi is live — no contracts, no fibre wait, just a voucher
-              code and you&apos;re online. Buy a voucher now if you&apos;re in a covered area, or
-              join the waitlist so we can email you the moment we reach your street.
-            </p>
-            <p className="max-w-xl text-xs text-white/50">
-              Currently live on <strong className="text-white/80">{COVERAGE_AREAS.join(', ')}</strong>
-              , and near <strong className="text-white/80">{COVERAGE_LANDMARKS.join(', ')}</strong>.
-            </p>
+        <div className="flex flex-col gap-6 pb-1">
+          <div className="border-l-2 border-brand-blue pl-5">
+            <div className="font-mono text-2xl font-bold text-white">7</div>
+            <div className="mt-0.5 text-xs text-white/35">services offered</div>
           </div>
-
-          <a
-            href={BUY_URL}
-            className="animate-fade-slide-in rounded-btn bg-brand-blue px-7 py-4 text-[15px] font-bold text-white transition-all duration-150 hover:-translate-y-0.5 hover:bg-brand-blue-deep"
-            style={{ animationDelay: '40ms' }}
-          >
-            Buy a voucher now →
-          </a>
-
-          <div className="animate-fade-slide-in w-full max-w-lg" style={{ animationDelay: '80ms' }}>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.06em] text-white/50">
-              Not in a covered area yet? Join the waitlist
-            </p>
-            <WaitlistForm />
+          <div className="border-l-2 border-brand-blue/40 pl-5">
+            <div className="font-mono text-2xl font-bold text-white">1</div>
+            <div className="mt-0.5 text-xs text-white/35">local team</div>
           </div>
-        </section>
-      </div>
-
-      <section className="border-t border-line bg-surface py-12">
-        <div className="mx-auto grid w-full max-w-5xl gap-6 px-6 sm:grid-cols-3">
-          {STEPS.map((step, i) => (
-            <div
-              key={step.title}
-              className="animate-fade-slide-in flex flex-col gap-2 rounded-card border border-line bg-page p-5 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(46,117,196,.25)]"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="font-mono text-[11px] font-bold uppercase tracking-[0.09em] text-brand-blue-deep">
-                Step {i + 1}
-              </div>
-              <div className="font-display text-base font-semibold text-ink">{step.title}</div>
-              <p className="text-sm text-muted">{step.body}</p>
-            </div>
-          ))}
+          <div className="border-l-2 border-brand-blue/20 pl-5">
+            <div className="font-mono text-2xl font-bold text-white">0</div>
+            <div className="mt-0.5 text-xs text-white/35">contracts</div>
+          </div>
         </div>
       </section>
 
-      {previewPlans.length > 0 && (
-        <section className="border-t border-line bg-page py-12">
-          <div className="mx-auto w-full max-w-5xl px-6 text-center">
-            <h2 className="font-display text-xl font-semibold text-ink">What it&apos;ll cost</h2>
-            <p className="mt-1 text-sm text-muted">
-              Real pricing, no surprises — pick what fits and buy a voucher today.
-            </p>
-            <div className="mt-8 grid gap-5 sm:grid-cols-3">
-              {previewPlans.map((plan, i) => (
-                <div
-                  key={plan.id}
-                  className="animate-fade-slide-in rounded-card border-[1.5px] border-line bg-surface p-5 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-blue hover:shadow-[0_6px_16px_-8px_rgba(46,117,196,.3)]"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                >
-                  <div className="font-display text-base font-semibold text-ink">{plan.name}</div>
-                  <div className="mt-0.5 text-xs text-muted">{formatPlanMeta(plan)}</div>
-                  <div className="mt-3 font-mono text-2xl font-bold text-brand-blue-deep">
-                    ₦{plan.priceNaira.toLocaleString('en-NG')}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Coverage strip */}
+      <div className="px-6 pb-16 sm:px-16">
+        <div className="flex flex-wrap items-center gap-3 rounded-frame border border-line-dark bg-surface-dark px-6 py-5">
+          <span className="font-mono text-xs uppercase tracking-wide text-white/35">WiFi live on:</span>
+          {[...COVERAGE_AREAS, ...COVERAGE_LANDMARKS].map((area) => (
+            <span key={area} className="rounded-btn bg-brand-blue/10 px-3 py-1 text-sm font-medium text-brand-blue-light">
+              {area}
+            </span>
+          ))}
+        </div>
+      </div>
 
-      <section className="border-t border-line bg-surface py-12">
-        <div className="mx-auto w-full max-w-5xl px-6 text-center">
-          <h2 className="font-display text-xl font-semibold text-ink">Why Shaddai WiFi</h2>
-          <div className="mt-8 grid gap-5 text-left sm:grid-cols-3">
-            {WHY.map((item, i) => (
-              <div
-                key={item.title}
-                className="animate-fade-slide-in rounded-card border border-line bg-page p-5 transition-all duration-150 hover:-translate-y-0.5"
-                style={{ animationDelay: `${i * 80}ms` }}
+      {/* Services grid */}
+      <section id="services" className="scroll-mt-6 border-t border-line-dark px-6 py-16 sm:px-16">
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="mb-10 flex items-end justify-between gap-4">
+            <div>
+              <div className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-brand-blue-light">
+                What we do
+              </div>
+              <h2 className="mt-2 font-display text-3xl font-bold text-white">Seven ways we keep you running</h2>
+            </div>
+            <Link href="/services" className="hidden text-sm font-semibold text-brand-blue-light hover:text-white sm:inline">
+              View all →
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {SERVICES.map((service) => (
+              <Link
+                key={service.slug}
+                href={`/services/${service.slug}`}
+                className="group flex items-center justify-between rounded-frame border border-line-dark bg-surface-dark p-6 transition-colors hover:border-brand-blue/40"
               >
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-blue-light/20 text-brand-blue-deep">
-                  {item.icon}
-                </div>
-                <div className="font-display text-sm font-semibold text-ink">{item.title}</div>
-                <p className="mt-1 text-sm text-muted">{item.body}</p>
+                <span className="font-display text-base font-semibold text-white">{service.title}</span>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  className="shrink-0 text-white/30 transition-transform group-hover:translate-x-1 group-hover:text-brand-blue-light"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it works — numbered rows */}
+      <section className="border-t border-line-dark px-6 py-16 sm:px-16">
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-brand-blue-light">
+            How it works
+          </div>
+          <h2 className="mt-2 font-display text-3xl font-bold text-white">Simple, whichever service you need</h2>
+          <div className="mt-8 flex flex-col">
+            {STEPS.map((step, i) => (
+              <div key={step.title} className="grid grid-cols-[48px_1fr] gap-5 border-t border-line-dark py-7 last:border-b sm:grid-cols-[60px_1fr_1fr]">
+                <span className="font-mono text-sm font-bold text-brand-blue">{String(i + 1).padStart(2, '0')}</span>
+                <h3 className="font-display text-lg font-bold text-white">{step.title}</h3>
+                <p className="text-[15px] leading-relaxed text-white/45">{step.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <StarlinkPromo />
-
-      <section className="border-t border-line bg-surface py-12">
-        <div className="mx-auto w-full max-w-5xl px-6 text-center">
-          <h2 className="font-display text-xl font-semibold text-ink">Other ways we can help</h2>
-          <p className="mt-1 text-sm text-muted">
-            Beyond WiFi — services for shops and small businesses around the estate.
-          </p>
-          <div className="mt-8 grid gap-5 text-left sm:grid-cols-2">
-            {SERVICES.map((service, i) => {
-              const encodedMessage = encodeURIComponent(service.quoteMessage);
-              return (
-                <div
-                  key={service.title}
-                  className="animate-fade-slide-in rounded-card border border-line bg-page p-5 transition-all duration-150 hover:-translate-y-0.5"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                >
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-blue-light/20 text-brand-blue-deep">
-                    {service.icon}
-                  </div>
-                  <div className="font-display text-sm font-semibold text-ink">{service.title}</div>
-                  <p className="mt-1 text-sm text-muted">{service.body}</p>
-                  <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
-                    {WHATSAPP_NUMBER && (
-                      <a
-                        href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`}
-                        className="text-brand-blue-deep underline underline-offset-2 hover:text-ink"
-                      >
-                        WhatsApp us
-                      </a>
-                    )}
+      {/* WiFi pricing */}
+      {previewPlans.length > 0 && (
+        <section id="pricing" className="scroll-mt-6 border-t border-line-dark px-6 py-16 sm:px-16">
+          <div className="mx-auto w-full max-w-3xl">
+            <div className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-brand-blue-light">
+              Community WiFi
+            </div>
+            <h2 className="mt-2 font-display text-3xl font-bold text-white">What it&apos;ll cost</h2>
+            <p className="mt-1 text-[15px] text-white/45">Real pricing, no surprises.</p>
+            <div className="mt-8 grid gap-px overflow-hidden rounded-frame bg-line-dark sm:grid-cols-3">
+              {previewPlans.map((plan, i) => {
+                const popular = previewPlans.length > 1 && i === 1;
+                return (
+                  <div key={plan.id} className={`relative flex flex-col p-7 ${popular ? 'bg-navy' : 'bg-page-dark'}`}>
+                    {popular && <div className="absolute inset-x-0 top-0 h-[3px] bg-brand-blue" />}
+                    <h3 className={`font-display text-lg font-bold ${popular ? 'text-brand-blue-light' : 'text-white'}`}>
+                      {plan.name}
+                    </h3>
+                    <p className="mt-0.5 text-xs text-white/35">{formatPlanMeta(plan)}</p>
+                    <div className={`mt-5 font-mono text-3xl font-bold ${popular ? 'text-brand-blue-light' : 'text-white'}`}>
+                      ₦{plan.priceNaira.toLocaleString('en-NG')}
+                    </div>
                     <a
-                      href={`mailto:${SUPPORT_EMAIL}?subject=${encodedMessage}`}
-                      className="text-brand-blue-deep underline underline-offset-2 hover:text-ink"
+                      href={BUY_URL}
+                      className={`mt-auto pt-6 text-center text-sm font-bold ${
+                        popular
+                          ? 'rounded-btn bg-brand-blue py-3 text-white hover:bg-brand-blue-deep'
+                          : 'rounded-btn border border-line-dark py-3 text-white/60 hover:border-white/30 hover:text-white'
+                      }`}
                     >
-                      Get a quote
+                      Buy now
                     </a>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Waitlist */}
+      <section className="border-t border-line-dark px-6 py-16 sm:px-16">
+        <div className="mx-auto w-full max-w-md text-center">
+          <h2 className="font-display text-2xl font-bold text-white">Not in a WiFi-covered area yet?</h2>
+          <p className="mt-2 text-[15px] text-white/45">
+            Join the waitlist — we&apos;ll email you the moment we reach your street.
+          </p>
+          <div className="mt-6 text-left">
+            <WaitlistForm />
           </div>
         </div>
       </section>
 
-      <section className="border-t border-line bg-page py-12">
-        <div className="mx-auto w-full max-w-2xl px-6">
-          <h2 className="text-center font-display text-xl font-semibold text-ink">
-            Frequently asked questions
-          </h2>
-          <div className="mt-6">
+      {/* FAQ */}
+      <section id="faq" className="scroll-mt-6 border-t border-line-dark px-6 py-16 sm:px-16">
+        <div className="mx-auto w-full max-w-2xl">
+          <h2 className="text-center font-display text-2xl font-bold text-white">Frequently asked questions</h2>
+          <div className="mt-8">
             <FaqAccordion />
           </div>
         </div>
       </section>
 
-      <footer className="mt-auto border-t border-line bg-surface py-10">
-        <div className="mx-auto grid w-full max-w-5xl gap-8 px-6 sm:grid-cols-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Image src="/logo.png" alt="Shaddai Communications" width={24} height={24} />
-              <span className="font-display text-sm font-bold text-ink">Shaddai Communications</span>
-            </div>
-            <p className="mt-2 text-xs text-muted">Ugbowo BDPA Estate, Benin City</p>
-          </div>
-          <div>
-            <div className="mb-2 font-mono text-[10.5px] font-bold uppercase tracking-wide text-muted">
-              Navigation
-            </div>
-            <div className="flex flex-col gap-1.5 text-sm text-ink">
-              <a href={BUY_URL} className="hover:text-brand-blue-deep">Buy a voucher</a>
-              <a href="/#faq" className="hover:text-brand-blue-deep">FAQ</a>
-            </div>
-          </div>
-          <div>
-            <div className="mb-2 font-mono text-[10.5px] font-bold uppercase tracking-wide text-muted">
-              Company
-            </div>
-            <div className="flex flex-col gap-1.5 text-sm text-ink">
-              <a href={`${BUY_URL}/business`} className="hover:text-brand-blue-deep">For businesses</a>
-              <a href={`${BUY_URL}/terms`} className="hover:text-brand-blue-deep">Terms</a>
-            </div>
-          </div>
-          <div>
-            <div className="mb-2 font-mono text-[10.5px] font-bold uppercase tracking-wide text-muted">
-              Talk to us
-            </div>
-            <div className="flex flex-col gap-1.5 text-sm text-ink">
-              <a href={`${BUY_URL}/support`} className="hover:text-brand-blue-deep">Support</a>
-              <span className="text-muted">{SUPPORT_EMAIL}</span>
-            </div>
-          </div>
-        </div>
-        <div className="mx-auto mt-8 w-full max-w-5xl border-t border-line px-6 pt-6 text-xs text-muted">
-          © {new Date().getFullYear()} Shaddai Comm Ventures. All rights reserved.
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }
