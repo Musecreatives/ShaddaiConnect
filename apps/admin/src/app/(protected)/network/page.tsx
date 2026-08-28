@@ -5,7 +5,8 @@ function formatDay(dateStr: string): string {
 }
 
 export default async function NetworkPage() {
-  const { nas, dailyUsage, totalDataAllTimeMb, cambiumBackhaul } = await getNetworkOverviewServer();
+  const { nas, dailyUsage, totalDataAllTimeMb, cambiumBackhaul, managedDevices, knownAccessPoints } =
+    await getNetworkOverviewServer();
   const maxMb = Math.max(...dailyUsage.map((d) => d.totalMb), 1);
 
   const cambiumOk = cambiumBackhaul.rssiDbm !== null && cambiumBackhaul.rssiDbm >= -65;
@@ -112,6 +113,67 @@ export default async function NetworkPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="rounded-card border border-line bg-surface">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="font-display text-sm font-semibold text-ink">Manage devices</h2>
+          <p className="mt-0.5 text-xs text-muted">
+            Jump straight into each device&apos;s own admin UI — no LAN access or tunnel needed.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 p-4">
+          {managedDevices.map((d) => (
+            <a
+              key={d.url}
+              href={d.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-btn border border-line bg-page px-3.5 py-2 text-sm font-semibold text-ink transition-colors hover:border-brand-blue hover:text-brand-blue-deep"
+            >
+              {d.name} ↗
+            </a>
+          ))}
+          {managedDevices.length === 0 && (
+            <p className="px-1 py-2 text-sm text-muted">No managed device links configured.</p>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-card border border-line bg-surface">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="font-display text-sm font-semibold text-ink">Wireless access points</h2>
+          <p className="mt-0.5 text-xs text-muted">
+            APs not managed by Omada — static info only, no live client/signal data.
+          </p>
+        </div>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+              <th className="px-4 py-3 font-semibold">Name</th>
+              <th className="px-4 py-3 font-semibold">SSID</th>
+              <th className="px-4 py-3 font-semibold">IP</th>
+              <th className="px-4 py-3 font-semibold">MAC</th>
+            </tr>
+          </thead>
+          <tbody>
+            {knownAccessPoints.map((ap) => (
+              <tr key={ap.macAddress} className="border-b border-line last:border-0">
+                <td className="px-4 py-3 font-semibold text-ink">{ap.name}</td>
+                <td className="px-4 py-3 font-mono text-muted">{ap.ssid}</td>
+                <td className="px-4 py-3 font-mono text-muted">{ap.ipAddress}</td>
+                <td className="px-4 py-3 font-mono text-muted">{ap.macAddress}</td>
+              </tr>
+            ))}
+            {knownAccessPoints.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted">
+                  No known access points configured.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       <div className="rounded-card border border-line bg-surface">

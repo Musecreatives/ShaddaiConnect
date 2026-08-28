@@ -17,11 +17,11 @@ export class BlockedMacsController {
 
   @Post()
   block(@Body() dto: BlockMacDto, @Req() req: Request & { user: AdminJwtPayload }) {
-    return this.blockedMacs.block(dto.macAddress, dto.reason, req.user.adminId);
+    return this.blockedMacs.block(dto.macAddress, dto.reason, req.user.adminId, req.user.email);
   }
 
   @Delete(':id')
-  unblock(@Param('id', ParseIntPipe) id: number) {
-    return this.blockedMacs.unblock(id);
+  unblock(@Param('id', ParseIntPipe) id: number, @Req() req: Request & { user: AdminJwtPayload }) {
+    return this.blockedMacs.unblock(id, req.user.email, req.user.adminId);
   }
 }

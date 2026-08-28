@@ -8,12 +8,18 @@ datasource db {
 }
 
 model Customer {
-  id           Int      @id @default(autoincrement()) @db.UnsignedInt
-  phone        String?  @db.VarChar(20)
-  email        String?  @db.VarChar(128)
-  name         String?  @db.VarChar(128)
-  locationNote String?  @map("location_note") @db.VarChar(255)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  id                     Int       @id @default(autoincrement()) @db.UnsignedInt
+  phone                  String?   @db.VarChar(20)
+  email                  String?   @db.VarChar(128)
+  name                   String?   @db.VarChar(128)
+  locationNote           String?   @map("location_note") @db.VarChar(255)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  /** Manually-triggered upsell email (see CustomersService.notifyTrialUpsell) — set once sent so
+   * re-clicking the admin button doesn't re-email the same trial-only customer. */
+  trialUpsellSentAt      DateTime? @map("trial_upsell_sent_at") @db.Timestamp(0)
+  /** Manually-triggered "your payment didn't go through" nudge (notifyFailedPayments) — same
+   * one-shot-per-customer dedup as trialUpsellSentAt. */
+  paymentReminderSentAt  DateTime? @map("payment_reminder_sent_at") @db.Timestamp(0)
 
   @@index([phone], map: "phone")
   @@map("customers")
@@ -274,9 +280,11 @@ model PushSubscription {
   p256dh       String   @db.VarChar(255)
   auth         String   @db.VarChar(255)
   voucherCode  String?  @map("voucher_code") @db.VarChar(32)
+  adminEmail   String?  @map("admin_email") @db.VarChar(255)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
 
   @@index([voucherCode], map: "voucher_code")
+  @@index([adminEmail], map: "admin_email")
   @@map("push_subscriptions")
 }
 
@@ -288,6 +296,20 @@ model BlockedMac {
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamp(0)
 
   @@map("blocked_macs")
+}
+
+model AdminActionLog {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  adminEmail String   @map("admin_email") @db.VarChar(255)
+  adminId    Int?     @map("admin_id") @db.UnsignedInt
+  action     String   @db.VarChar(64)
+  targetType String   @map("target_type") @db.VarChar(32)
+  targetId   String   @map("target_id") @db.VarChar(64)
+  detail     String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([targetType, targetId], map: "target_idx")
+  @@map("admin_action_logs")
 }
 
 model SupportTicket {

@@ -71,6 +71,7 @@ export interface SessionRow {
   downloadBytes: number;
   uploadBytes: number;
   live: boolean;
+  stale: boolean;
   signalRssi: number | null;
   apName: string | null;
 }
@@ -202,6 +203,21 @@ export function getCustomers(): Promise<{ customers: CustomerRow[]; total: numbe
   return apiFetch('/admin/customers');
 }
 
+export function getReminderCounts(): Promise<{
+  trialUpsellPending: number;
+  paymentReminderPending: number;
+}> {
+  return apiFetch('/admin/customers/reminder-counts');
+}
+
+export function notifyTrialUpsell(): Promise<{ notified: number }> {
+  return apiFetch('/admin/customers/notify-trial-upsell', { method: 'POST' });
+}
+
+export function notifyFailedPayments(): Promise<{ notified: number }> {
+  return apiFetch('/admin/customers/notify-failed-payments', { method: 'POST' });
+}
+
 export interface NasRow {
   id: number;
   nasname: string;
@@ -222,12 +238,26 @@ export interface TopBandwidthUser {
   totalMb: number;
 }
 
+export interface ManagedDeviceLink {
+  name: string;
+  url: string;
+}
+
+export interface AccessPointInfo {
+  name: string;
+  ssid: string;
+  ipAddress: string;
+  macAddress: string;
+}
+
 export interface NetworkOverview {
   nas: NasRow[];
   dailyUsage: { date: string; totalMb: number }[];
   totalDataAllTimeMb: number;
   cambiumBackhaul: CambiumBackhaulStatus;
   topBandwidthUsers: TopBandwidthUser[];
+  managedDevices: ManagedDeviceLink[];
+  knownAccessPoints: AccessPointInfo[];
 }
 
 export function getNetworkOverview(): Promise<NetworkOverview> {
@@ -390,6 +420,28 @@ export function blockMac(
 
 export function unblockMac(id: number): Promise<{ unblocked: true }> {
   return apiFetch(`/admin/blocked-macs/${id}`, { method: 'DELETE' });
+}
+
+export interface AuditLogEntry {
+  id: number;
+  adminEmail: string;
+  adminId: number | null;
+  action: string;
+  targetType: string;
+  targetId: string;
+  detail: string | null;
+  createdAt: string;
+}
+
+export function getAuditLog(): Promise<{ entries: AuditLogEntry[]; total: number }> {
+  return apiFetch('/admin/audit-log');
+}
+
+export function subscribeAdminPush(input: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}): Promise<{ subscribed: true }> {
+  return apiFetch('/admin/push/subscribe', { method: 'POST', body: JSON.stringify(input) });
 }
 
 export interface DisconnectResult {

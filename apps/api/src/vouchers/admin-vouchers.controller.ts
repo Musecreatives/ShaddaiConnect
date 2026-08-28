@@ -8,8 +8,13 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { Voucher } from '@prisma/client';
+import type { Request } from 'express';
+import { AuditService } from '../audit/audit.service';
+import { AdminJwtPayload } from '../auth/auth.service';
 import { CoaService } from '../coa/coa.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateVoucherDto } from './dto/create-voucher.dto';
@@ -23,6 +28,7 @@ export class AdminVouchersController {
   constructor(
     private readonly vouchers: VouchersService,
     private readonly coa: CoaService,
+    private readonly audit: AuditService,
   ) {}
 
   @Get()
@@ -45,16 +51,39 @@ export class AdminVouchersController {
   }
 
   @Patch(':id')
-  async patch(@Param('id', ParseIntPipe) id: number, @Body() dto: PatchVoucherDto) {
+  async patch(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: PatchVoucherDto,
+    @Req() req: Request & { user: AdminJwtPayload },
+  ) {
+    let result: Voucher;
+    let detail: string | undefined;
     switch (dto.action) {
       case 'disable':
-        return this.vouchers.disable(id);
+        result = await this.vouchers.disable(id);
+        break;
       case 'enable':
-        return this.vouchers.enable(id);
+        result = await this.vouchers.enable(id);
+        break;
       case 'extend':
         if (!dto.additionalDays) throw new BadRequestException('additionalDays is required');
-        return this.vouchers.extend(id, dto.additionalDays);
+        result = await this.vouchers.extend(id, dto.additionalDays);
+        detail = `+${dto.additionalDays} day(s)`;
+        break;
+      default:
+        return;
     }
+
+    await this.audit.record({
+      adminEmail: req.user.email,
+      adminId: req.user.adminId,
+      action: `voucher_${dto.action}`,
+      targetType: 'voucher',
+      targetId: result.code,
+      detail,
+    });
+
+    return result;
   }
 
   /** Live disconnect (RADIUS CoA) — separate from disable, which only stops the *next*

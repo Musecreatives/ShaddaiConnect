@@ -45,31 +45,38 @@ export class CambiumSnmpService {
 
     const session = snmp.createSession(this.host!, this.community, { timeout: 3000 });
     try {
-      const varbinds = await new Promise<snmp.Varbind[]>((resolve, reject) => {
-        session.get(
-          [OID_DOWNLINK_RSSI, OID_CONNECTION_STATUS, OID_SSID],
-          (error, varbinds) => {
-            if (error) reject(error);
-            else resolve(varbinds ?? []);
-          },
-        );
-      });
+      // Queried independently, not as one batched get() — a single OID net-snmp can't resolve
+      // (e.g. connectionStatus, which doesn't exist on a Force180; the OIDs here were originally
+      // mapped against a different Cambium model, an ePMP1000 Subscriber Module) errors the
+      // *entire* batched request, which was blanking out RSSI/SSID too even though those two
+      // resolve fine. One bad OID should degrade just that field, not the whole reading.
+      const [rssiDbm, connectionStatus, ssid] = await Promise.all([
+        this.getOne(session, OID_DOWNLINK_RSSI, Number),
+        this.getOne(session, OID_CONNECTION_STATUS, String),
+        this.getOne(session, OID_SSID, String),
+      ]);
 
-      const [rssi, status, ssid] = varbinds;
-      const isError = (vb: snmp.Varbind | undefined) =>
-        !vb || snmp.isVarbindError(vb);
-
-      return {
-        configured: true,
-        rssiDbm: isError(rssi) ? null : Number(rssi.value),
-        connectionStatus: isError(status) ? null : String(status.value),
-        ssid: isError(ssid) ? null : String(ssid.value),
-      };
-    } catch (err) {
-      this.logger.warn(`Cambium SNMP query failed: ${(err as Error).message}`);
-      return { configured: true, rssiDbm: null, connectionStatus: null, ssid: null };
+      return { configured: true, rssiDbm, connectionStatus, ssid };
     } finally {
       session.close();
     }
+  }
+
+  private getOne<T>(
+    session: snmp.Session,
+    oid: string,
+    parse: (raw: unknown) => T,
+  ): Promise<T | null> {
+    return new Promise((resolve) => {
+      session.get([oid], (error, varbinds) => {
+        const vb = varbinds?.[0];
+        if (error || !vb || snmp.isVarbindError(vb)) {
+          if (error) this.logger.debug(`Cambium SNMP get failed for ${oid}: ${error.message}`);
+          resolve(null);
+          return;
+        }
+        resolve(parse(vb.value));
+      });
+    });
   }
 }

@@ -56,7 +56,16 @@ export class CoaService {
       return { attempted: false, success: false, message: 'No open session for this voucher.' };
     }
 
-    const nas = await this.prisma.nas.findFirst({ where: { nasname: session.nasIpAddress } });
+    // radacct's recorded nasIpAddress for a given session isn't reliable — pfSense and
+    // FreeRADIUS have been observed logging different source addresses for the same physical
+    // NAS across sessions (LAN IP, the KVM host's NAT interface, a public IP, a Tailscale IP),
+    // so an exact match against it is too fragile. There is only ever one physical NAS in this
+    // deployment (CLAUDE.md), so with exactly one configured `nas` row, use it regardless of
+    // what this particular session happened to log — only fall back to exact matching if a
+    // second NAS is ever added and the row genuinely needs picking out.
+    const nasRows = await this.prisma.nas.findMany();
+    const nas =
+      nasRows.length === 1 ? nasRows[0] : nasRows.find((n) => n.nasname === session.nasIpAddress);
     if (!nas) {
       return {
         attempted: false,

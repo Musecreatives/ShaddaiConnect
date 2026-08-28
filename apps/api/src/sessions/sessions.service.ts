@@ -16,6 +16,11 @@ export interface SessionDto {
   downloadBytes: number;
   uploadBytes: number;
   live: boolean;
+  /** True only when `live` and the voucher this session's username points to is explicitly
+   * `disabled`/`expired` — i.e. FreeRADIUS/pfSense never sent Accounting-Stop even though the
+   * voucher itself should no longer be usable. Unmatched/unknown vouchers are left false to
+   * avoid false positives. */
+  stale: boolean;
   /** From the Omada Controller, matched by MAC — analytics/visibility only, never enforcement
    * (CLAUDE.md: MACs are never the enforcement mechanism). Null when unmatched or Omada isn't
    * configured/reachable. */
@@ -67,12 +72,29 @@ export class SessionsService {
     ]);
 
     const byMac = new Map(omadaClients.map((c) => [normalizeMac(c.mac), c]));
-    return { sessions: rows.map((row) => this.toDto(row, byMac)), total };
+
+    const liveCodes = rows.filter((r) => r.acctStopTime === null).map((r) => r.username);
+    const staleStatuses = new Set(['expired', 'disabled']);
+    const vouchers =
+      liveCodes.length > 0
+        ? await this.prisma.voucher.findMany({
+            where: { code: { in: liveCodes } },
+            select: { code: true, status: true },
+          })
+        : [];
+    const voucherStatusByCode = new Map(vouchers.map((v) => [v.code, v.status]));
+
+    return {
+      sessions: rows.map((row) => this.toDto(row, byMac, voucherStatusByCode, staleStatuses)),
+      total,
+    };
   }
 
   private toDto(
     row: RadAcct,
     omadaByMac: Map<string, { rssi: number | null; apName: string | null }>,
+    voucherStatusByCode: Map<string, string>,
+    staleStatuses: Set<string>,
   ): SessionDto {
     const rawIn = Number(row.acctInputOctets ?? 0);
     const rawOut = Number(row.acctOutputOctets ?? 0);
@@ -91,6 +113,8 @@ export class SessionsService {
     // because that MAC happens to be online again right now (a different, later connection) is
     // misleading, not a real reading of what that past session actually experienced.
     const omadaMatch = live ? omadaByMac.get(normalizeMac(row.callingStationId)) : undefined;
+    const voucherStatus = live ? voucherStatusByCode.get(row.username) : undefined;
+    const stale = live && !!voucherStatus && staleStatuses.has(voucherStatus);
 
     return {
       id: row.acctUniqueId,
@@ -104,6 +128,7 @@ export class SessionsService {
       downloadBytes: this.invertOctets ? rawIn : rawOut,
       uploadBytes: this.invertOctets ? rawOut : rawIn,
       live,
+      stale,
       signalRssi: omadaMatch?.rssi ?? null,
       apName: omadaMatch?.apName ?? null,
     };

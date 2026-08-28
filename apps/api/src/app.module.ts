@@ -23,6 +23,7 @@ import { NtfyModule } from './ntfy/ntfy.module';
 import { BlockedMacsModule } from './blocked-macs/blocked-macs.module';
 import { PushModule } from './push/push.module';
 import { CoaModule } from './coa/coa.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { CoaModule } from './coa/coa.module';
     BlockedMacsModule,
     PushModule,
     CoaModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

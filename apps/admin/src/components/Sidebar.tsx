@@ -124,6 +124,20 @@ function BlocklistIcon() {
   );
 }
 
+function AuditLogIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M6 3H15L20 8V21H6V3Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M9 12H16M9 16H16M9 8H12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function SettingsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -157,6 +171,7 @@ const NAV_GROUPS = [
       { href: '/trial-feedback', label: 'Trial Feedback', Icon: FeedbackIcon },
       { href: '/network', label: 'Network / Usage', Icon: NetworkIcon },
       { href: '/blocklist', label: 'Blocklist', Icon: BlocklistIcon },
+      { href: '/audit-log', label: 'Audit Log', Icon: AuditLogIcon },
       { href: '/support', label: 'Support', Icon: SupportIcon },
       { href: '/settings', label: 'Settings', Icon: SettingsIcon },
     ],

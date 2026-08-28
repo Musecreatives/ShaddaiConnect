@@ -4,6 +4,7 @@ import { Badge } from '@shaddai/ui';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ApiError, getVouchers, patchVoucher, type Plan, type Voucher } from '@/lib/api';
+import { downloadCsv } from '@/lib/csv';
 import { CreateVoucherModal } from './CreateVoucherModal';
 
 const STORAGE_KEY = 'shaddai_admin_print_batch';
@@ -16,6 +17,21 @@ function formatDate(value: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+const PLAN_TYPE_CLASSES: Record<'hourly' | 'monthly', string> = {
+  hourly: 'bg-brand-blue-light/20 text-brand-blue-deep',
+  monthly: 'bg-purple-100 text-purple-700',
+};
+
+function PlanTypeTag({ planType }: { planType: 'hourly' | 'monthly' }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide ${PLAN_TYPE_CLASSES[planType]}`}
+    >
+      {planType}
+    </span>
+  );
 }
 
 export function VouchersClient({
@@ -64,6 +80,28 @@ export function VouchersClient({
     }
   }
 
+  function handleExportCsv() {
+    downloadCsv(
+      `vouchers-${new Date().toISOString().slice(0, 10)}.csv`,
+      vouchers.map((v) => ({
+        code: v.code,
+        plan: v.plan.name,
+        planType: v.plan.planType,
+        status: v.status,
+        createdAt: v.createdAt,
+        expiresAt: v.expiresAt ?? '',
+      })),
+      [
+        { key: 'code', label: 'Code' },
+        { key: 'plan', label: 'Plan' },
+        { key: 'planType', label: 'Plan type' },
+        { key: 'status', label: 'Status' },
+        { key: 'createdAt', label: 'Created' },
+        { key: 'expiresAt', label: 'Expires' },
+      ],
+    );
+  }
+
   async function handleExtend(id: number) {
     const input = window.prompt('Extend validity by how many days?', '30');
     if (!input) return;
@@ -93,13 +131,22 @@ export function VouchersClient({
           <h1 className="font-display text-xl font-bold text-ink">Vouchers</h1>
           <p className="mt-1 text-sm text-muted">Issue, disable, and track voucher codes.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          className="hidden rounded-btn bg-brand-blue px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-blue-deep sm:block"
-        >
-          + New voucher batch
-        </button>
+        <div className="hidden gap-2 sm:flex">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="rounded-btn border border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:border-brand-blue hover:text-brand-blue-deep"
+          >
+            Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="rounded-btn bg-brand-blue px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-blue-deep"
+          >
+            + New voucher batch
+          </button>
+        </div>
       </div>
 
       {/* FAB — the header button is hidden below sm since "+ New voucher batch" doesn't fit
@@ -148,8 +195,11 @@ export function VouchersClient({
           >
             <div className="min-w-0">
               <div className="font-mono text-[13px] font-semibold text-ink">{voucher.code}</div>
-              <div className="mt-0.5 truncate text-[11px] text-muted">
-                {voucher.plan.name} · {formatDate(voucher.createdAt)}
+              <div className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted">
+                <span className="truncate">
+                  {voucher.plan.name} · {formatDate(voucher.createdAt)}
+                </span>
+                <PlanTypeTag planType={voucher.plan.planType} />
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -199,7 +249,12 @@ export function VouchersClient({
             {vouchers.map((voucher) => (
               <tr key={voucher.id} className="border-b border-line last:border-0">
                 <td className="px-4 py-3 font-mono">{voucher.code}</td>
-                <td className="px-4 py-3">{voucher.plan.name}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span>{voucher.plan.name}</span>
+                    <PlanTypeTag planType={voucher.plan.planType} />
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   <Badge status={voucher.status} />
                 </td>

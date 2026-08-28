@@ -161,7 +161,19 @@ export function SessionsClient({
               const isBlocked = mac && blockedMacs.has(mac);
               return (
                 <tr key={session.id} className="border-b border-line last:border-0">
-                  <td className="px-4 py-3 font-mono">{session.username}</td>
+                  <td className="px-4 py-3 font-mono">
+                    <div className="flex items-center gap-2">
+                      <span>{session.username}</span>
+                      {session.stale && (
+                        <span
+                          title="Still open in radacct but the voucher is expired/disabled — pfSense/FreeRADIUS never sent Accounting-Stop. An auto-disconnect job retries a CoA kick every minute."
+                          className="inline-flex items-center rounded-full bg-amber-tint px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-amber"
+                        >
+                          Stale
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 font-mono text-muted">{session.macAddress || '—'}</td>
                   <td className="px-4 py-3 font-mono text-muted">{session.ipAddress || '—'}</td>
                   <td className="px-4 py-3 text-muted">{formatDate(session.startedAt)}</td>

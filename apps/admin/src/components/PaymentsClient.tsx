@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { getPayments, type AdminPaymentRow } from '@/lib/api';
+import { downloadCsv } from '@/lib/csv';
 
 const STATUS_STYLES: Record<AdminPaymentRow['status'], string> = {
   success: 'bg-success-tint text-success',
@@ -34,11 +35,42 @@ export function PaymentsClient({
     setPayments(result.payments);
   }
 
+  function handleExportCsv() {
+    downloadCsv(
+      `payments-${new Date().toISOString().slice(0, 10)}.csv`,
+      payments.map((p) => ({
+        reference: p.reference,
+        customer: p.customerEmail ?? p.customerPhone ?? '',
+        plan: p.planName ?? '',
+        amountNaira: p.amountNaira,
+        status: p.status,
+        createdAt: p.createdAt,
+      })),
+      [
+        { key: 'reference', label: 'Reference' },
+        { key: 'customer', label: 'Customer' },
+        { key: 'plan', label: 'Plan' },
+        { key: 'amountNaira', label: 'Amount (NGN)' },
+        { key: 'status', label: 'Status' },
+        { key: 'createdAt', label: 'Date' },
+      ],
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-display text-xl font-bold text-ink">Payments</h1>
-        <p className="mt-1 text-sm text-muted">{total} total · synced from Paystack.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-xl font-bold text-ink">Payments</h1>
+          <p className="mt-1 text-sm text-muted">{total} total · synced from Paystack.</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          className="rounded-btn border border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:border-brand-blue hover:text-brand-blue-deep"
+        >
+          Export CSV
+        </button>
       </div>
 
       <div className="flex gap-2">

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
 import { adminAlertTemplate } from '../email/templates/admin-alert.template';
+import { PushService } from '../push/push.service';
 
 export interface NtfyPublishInput {
   title: string;
@@ -35,6 +36,7 @@ export class NtfyService {
   constructor(
     config: ConfigService,
     private readonly email: EmailService,
+    private readonly push: PushService,
   ) {
     this.baseUrl = config.get<string>('NTFY_URL');
     this.topic = config.get<string>('NTFY_TOPIC');
@@ -49,7 +51,11 @@ export class NtfyService {
   }
 
   async publish(input: NtfyPublishInput): Promise<void> {
-    await Promise.all([this.publishToNtfy(input), this.publishToEmail(input)]);
+    await Promise.all([
+      this.publishToNtfy(input),
+      this.publishToEmail(input),
+      this.push.sendToAdmins({ title: input.title, body: input.message }),
+    ]);
   }
 
   private async publishToNtfy(input: NtfyPublishInput): Promise<void> {

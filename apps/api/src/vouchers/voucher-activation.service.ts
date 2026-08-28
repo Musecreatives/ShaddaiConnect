@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { AuditService } from '../audit/audit.service';
+import { CoaService } from '../coa/coa.service';
 import { NtfyService } from '../ntfy/ntfy.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PushService } from '../push/push.service';
@@ -21,6 +23,8 @@ export class VoucherActivationService {
     private readonly vouchers: VouchersService,
     private readonly ntfy: NtfyService,
     private readonly push: PushService,
+    private readonly coa: CoaService,
+    private readonly audit: AuditService,
   ) {}
 
   @Cron('*/30 * * * * *')
@@ -175,5 +179,45 @@ export class VoucherActivationService {
     }
 
     return blocked;
+  }
+
+  /**
+   * Closes the "one connection slips through" / ghost-session gap: a voucher can be
+   * disabled/expired while its radacct row stays open indefinitely if pfSense/FreeRADIUS never
+   * sends Accounting-Stop (dropped AP, abrupt disconnect, stale NAS entry). Every ~60s, find
+   * open sessions whose voucher is no longer active and attempt a live CoA kick. Never touches
+   * radacct directly (read-only per CLAUDE.md) — the actual accounting-stop write, if any, is
+   * still FreeRADIUS's. disconnectVoucher() never throws, so failures (e.g. pfSense not
+   * listening on UDP 3799 yet) are logged and swallowed, not fatal to the cron.
+   */
+  @Cron('0 * * * * *')
+  async disconnectStaleSessions(): Promise<void> {
+    const openSessions = await this.prisma.radAcct.findMany({
+      where: { acctStopTime: null },
+      select: { username: true },
+      distinct: ['username'],
+    });
+    if (openSessions.length === 0) return;
+
+    const codes = openSessions.map((s) => s.username);
+    const staleVouchers = await this.prisma.voucher.findMany({
+      where: { code: { in: codes }, status: { in: ['expired', 'disabled'] } },
+      select: { code: true },
+    });
+    if (staleVouchers.length === 0) return;
+
+    for (const voucher of staleVouchers) {
+      const result = await this.coa.disconnectVoucher(voucher.code);
+      if (!result.attempted) continue;
+
+      this.logger.log(`Stale-session disconnect for ${voucher.code}: ${result.message}`);
+      await this.audit.record({
+        adminEmail: 'system',
+        action: 'auto_disconnect_stale_session',
+        targetType: 'session',
+        targetId: voucher.code,
+        detail: result.message,
+      });
+    }
   }
 }

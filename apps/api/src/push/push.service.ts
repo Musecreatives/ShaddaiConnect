@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as webpush from 'web-push';
 import { PrismaService } from '../prisma/prisma.service';
+import { SubscribeAdminPushDto } from './dto/subscribe-admin-push.dto';
 import { SubscribePushDto } from './dto/subscribe-push.dto';
 
 export interface PushPayload {
@@ -54,6 +55,31 @@ export class PushService {
 
   async unsubscribe(endpoint: string): Promise<void> {
     await this.prisma.pushSubscription.deleteMany({ where: { endpoint } });
+  }
+
+  async subscribeAdmin(dto: SubscribeAdminPushDto, adminEmail: string): Promise<{ subscribed: true }> {
+    await this.prisma.pushSubscription.upsert({
+      where: { endpoint: dto.endpoint },
+      create: {
+        endpoint: dto.endpoint,
+        p256dh: dto.keys.p256dh,
+        auth: dto.keys.auth,
+        adminEmail,
+      },
+      update: { adminEmail, voucherCode: null },
+    });
+    return { subscribed: true };
+  }
+
+  /** Real OS-level push for the admin PWA, alongside the ntfy/email fan-out every admin alert
+   * already goes through — see NtfyService.publish(). No-ops (same as sendToVoucher) if VAPID
+   * keys aren't configured. */
+  async sendToAdmins(payload: PushPayload): Promise<void> {
+    if (!this.enabled) return;
+    const subs = await this.prisma.pushSubscription.findMany({
+      where: { adminEmail: { not: null } },
+    });
+    await Promise.all(subs.map((sub) => this.sendToSubscription(sub, payload)));
   }
 
   /**

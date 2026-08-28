@@ -109,7 +109,12 @@ services:
   # `docker inspect`/process listings.
   cloudflared:
     image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate run
+    # --protocol http2: default QUIC was observed dropping all 4 edge connections every
+    # ~15-30min ("timeout: no recent network activity"), each drop taking several seconds to
+    # re-register — the direct cause of buy.shaddaicommunications.com intermittently hanging.
+    # QUIC's UDP transport is known to be unreliable behind some ISP/NAT paths; HTTP/2 (TCP)
+    # trades a little latency for a connection that doesn't silently die mid-request.
+    command: tunnel --no-autoupdate --protocol http2 run
     network_mode: host
     restart: unless-stopped
     env_file:

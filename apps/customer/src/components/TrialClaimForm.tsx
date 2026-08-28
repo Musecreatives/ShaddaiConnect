@@ -136,7 +136,9 @@ export function TrialClaimForm() {
           type="text"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          placeholder="Full name"
+          placeholder="Full name (first and last)"
+          pattern="[A-Za-zÀ-ÿ'\-]{2,}(\s+[A-Za-zÀ-ÿ'\-]{2,})+"
+          title="Enter your full name (first and last name)."
           required
           className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
         />

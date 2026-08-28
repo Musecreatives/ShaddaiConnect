@@ -25,3 +25,36 @@ self.addEventListener('fetch', (event) => {
     fetch(event.request).catch(() => caches.match(event.request)),
   );
 });
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: 'Shaddai Admin', body: event.data.text() };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'Shaddai Admin', {
+      body: payload.body,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      tag: payload.tag,
+      data: payload.data,
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.endsWith(url) && 'focus' in client) return client.focus();
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
+});

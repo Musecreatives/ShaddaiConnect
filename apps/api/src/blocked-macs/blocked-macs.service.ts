@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service';
 import { CoaService } from '../coa/coa.service';
 import { NtfyService } from '../ntfy/ntfy.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,6 +14,7 @@ export class BlockedMacsService {
     private readonly vouchers: VouchersService,
     private readonly ntfy: NtfyService,
     private readonly coa: CoaService,
+    private readonly audit: AuditService,
   ) {}
 
   findAll() {
@@ -25,7 +27,12 @@ export class BlockedMacsService {
    * used that isn't already disabled/expired — same radcheck-removal path as a manual admin
    * disable, so it stops the next reconnect attempt without touching a session already open.
    */
-  async block(macAddress: string, reason: string | undefined, adminId: number | undefined) {
+  async block(
+    macAddress: string,
+    reason: string | undefined,
+    adminId: number | undefined,
+    adminEmail: string,
+  ) {
     const normalized = macAddress.trim().toLowerCase();
     const existing = await this.prisma.blockedMac.findUnique({ where: { macAddress: normalized } });
     if (existing) {
@@ -70,13 +77,29 @@ export class BlockedMacsService {
       tags: ['no_entry_sign'],
     });
 
+    await this.audit.record({
+      adminEmail,
+      adminId,
+      action: 'block_mac',
+      targetType: 'mac',
+      targetId: normalized,
+      detail: reason,
+    });
+
     return { ...blocked, disabledVoucherCount: vouchersToDisable.length, disconnectedCount };
   }
 
-  async unblock(id: number) {
+  async unblock(id: number, adminEmail: string, adminId: number | undefined) {
     const existing = await this.prisma.blockedMac.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`Blocked MAC ${id} not found`);
     await this.prisma.blockedMac.delete({ where: { id } });
+    await this.audit.record({
+      adminEmail,
+      adminId,
+      action: 'unblock_mac',
+      targetType: 'mac',
+      targetId: existing.macAddress,
+    });
     return { unblocked: true };
   }
 }

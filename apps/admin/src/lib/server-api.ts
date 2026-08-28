@@ -4,6 +4,7 @@ import type {
   AdminSettings,
   AdminStats,
   AdminUserRow,
+  AuditLogEntry,
   BlockedMac,
   CustomerRow,
   FraudSignal,
@@ -85,4 +86,15 @@ export function getSupportTicketsServer(): Promise<SupportTicket[]> {
 
 export function getBlockedMacsServer(): Promise<BlockedMac[]> {
   return serverFetch('/admin/blocked-macs');
+}
+
+export function getAuditLogServer(): Promise<{ entries: AuditLogEntry[]; total: number }> {
+  return serverFetch('/admin/audit-log');
+}
+
+export function getReminderCountsServer(): Promise<{
+  trialUpsellPending: number;
+  paymentReminderPending: number;
+}> {
+  return serverFetch('/admin/customers/reminder-counts');
 }

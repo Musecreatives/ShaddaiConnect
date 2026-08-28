@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getNotifications, type AdminNotification } from '@/lib/api';
+import { subscribeToAdminPush } from '@/lib/push';
 
 const POLL_MS = 30_000;
 
@@ -64,7 +65,32 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [lastSeenAt, setLastSeenAt] = useState(0);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>(
+    'unsupported',
+  );
+  const [enablingPush, setEnablingPush] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Deliberately not a lazy useState initializer — Notification.permission must be read
+    // client-only, after mount, to keep the server-rendered HTML and the client's first
+    // render identical (avoids a hydration mismatch on this "unsupported"-by-default state).
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPushPermission(Notification.permission);
+    }
+  }, []);
+
+  async function handleEnablePush() {
+    setEnablingPush(true);
+    try {
+      const result = await subscribeToAdminPush();
+      if (result === 'subscribed') setPushPermission('granted');
+      else if (result === 'denied') setPushPermission('denied');
+    } finally {
+      setEnablingPush(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -152,6 +178,19 @@ export function NotificationBell() {
                 </button>
               )}
             </div>
+            {pushPermission === 'default' && (
+              <div className="flex items-center justify-between gap-3 border-b border-line bg-brand-blue-light/10 px-4 py-2.5">
+                <span className="text-xs text-muted">Get OS-level alerts, even when this tab is closed.</span>
+                <button
+                  type="button"
+                  disabled={enablingPush}
+                  onClick={handleEnablePush}
+                  className="shrink-0 text-xs font-semibold text-brand-blue-deep disabled:opacity-40"
+                >
+                  {enablingPush ? 'Enabling…' : 'Enable push'}
+                </button>
+              </div>
+            )}
             <div className="max-h-[calc(80vh-49px)] overflow-y-auto sm:max-h-90">
               {notifications.length === 0 && (
                 <p className="px-4 py-8 text-center text-sm text-muted">Nothing yet.</p>

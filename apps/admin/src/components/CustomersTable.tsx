@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { CustomerRow } from '@/lib/api';
+import { downloadCsv } from '@/lib/csv';
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('en-NG', {
@@ -22,15 +23,46 @@ export function CustomersTable({ customers }: { customers: CustomerRow[] }) {
     );
   }, [customers, query]);
 
+  function handleExportCsv() {
+    downloadCsv(
+      `customers-${new Date().toISOString().slice(0, 10)}.csv`,
+      filtered.map((c) => ({
+        name: c.name ?? '',
+        email: c.email ?? '',
+        phone: c.phone ?? '',
+        voucherCount: c.voucherCount,
+        totalPaidNaira: c.totalPaidNaira,
+        createdAt: c.createdAt,
+      })),
+      [
+        { key: 'name', label: 'Name' },
+        { key: 'email', label: 'Email' },
+        { key: 'phone', label: 'Phone' },
+        { key: 'voucherCount', label: 'Vouchers' },
+        { key: 'totalPaidNaira', label: 'Total paid (NGN)' },
+        { key: 'createdAt', label: 'Since' },
+      ],
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search by name, email, or phone…"
-        className="w-full max-w-sm rounded-btn border-[1.5px] border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-brand-blue focus:outline-none sm:w-80"
-      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by name, email, or phone…"
+          className="w-full max-w-sm rounded-btn border-[1.5px] border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-brand-blue focus:outline-none sm:w-80"
+        />
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          className="rounded-btn border border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:border-brand-blue hover:text-brand-blue-deep"
+        >
+          Export CSV
+        </button>
+      </div>
 
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full text-left text-sm">

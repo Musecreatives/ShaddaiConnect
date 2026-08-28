@@ -1,6 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { CambiumSnmpService, type CambiumBackhaulStatus } from './cambium-snmp.service';
+
+export interface ManagedDeviceLink {
+  name: string;
+  url: string;
+}
+
+/** Static registry for wireless APs that aren't Omada-managed (e.g. a plain TP-Link relay) and
+ * so have no API this app can poll for live clients/signal — name/SSID/IP/MAC only, entered by
+ * hand, not refreshed automatically. */
+export interface AccessPointInfo {
+  name: string;
+  ssid: string;
+  ipAddress: string;
+  macAddress: string;
+}
 
 export interface NasRow {
   id: number;
@@ -30,6 +46,12 @@ export interface NetworkOverview {
    * heavy trial user can outrank a light but current subscriber. Good enough for "who's using
    * the most data," not a billing-grade report. */
   topBandwidthUsers: TopBandwidthUser[];
+  /** Quick-access links into each device's own web UI (reverse-proxied via Caddy over
+   * Tailscale — see docker/docker-compose.portal.yml Caddyfile) — admin console never talks to
+   * these devices directly, this is just a bookmark list for jumping into their native UIs. */
+  managedDevices: ManagedDeviceLink[];
+  /** Wireless APs outside Omada's reach — see AccessPointInfo. */
+  knownAccessPoints: AccessPointInfo[];
 }
 
 function startOfDay(daysAgo: number): Date {
@@ -43,10 +65,29 @@ const TREND_DAYS = 14;
 
 @Injectable()
 export class NetworkService {
+  private readonly logger = new Logger(NetworkService.name);
+  private readonly managedDevices: ManagedDeviceLink[];
+  private readonly knownAccessPoints: AccessPointInfo[];
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cambium: CambiumSnmpService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.managedDevices = this.parseJsonEnv(config, 'MANAGED_DEVICE_LINKS');
+    this.knownAccessPoints = this.parseJsonEnv(config, 'KNOWN_ACCESS_POINTS');
+  }
+
+  private parseJsonEnv<T>(config: ConfigService, key: string): T[] {
+    const raw = config.get<string>(key);
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw) as T[];
+    } catch {
+      this.logger.warn(`${key} is not valid JSON — ignoring.`);
+      return [];
+    }
+  }
 
   async getOverview(): Promise<NetworkOverview> {
     // Never select `secret` — it's the live RADIUS shared secret (CLAUDE.md: never expose it).
@@ -101,6 +142,8 @@ export class NetworkService {
       totalDataAllTimeMb: totalBytes / 1_000_000,
       cambiumBackhaul,
       topBandwidthUsers,
+      managedDevices: this.managedDevices,
+      knownAccessPoints: this.knownAccessPoints,
     };
   }
 }
