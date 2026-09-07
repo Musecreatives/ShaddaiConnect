@@ -28,6 +28,7 @@ import { SiteSettingsModule } from './site-settings/site-settings.module';
 import { AuditModule } from './audit/audit.module';
 import { JournalModule } from './journal/journal.module';
 import { MediaModule } from './media/media.module';
+import { MailerModule } from './mailer/mailer.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { MediaModule } from './media/media.module';
     AuditModule,
     JournalModule,
     MediaModule,
+    MailerModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

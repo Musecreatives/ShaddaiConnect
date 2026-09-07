@@ -149,7 +149,7 @@ export default async function NetworkPage() {
         </div>
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+            <tr className="border-b border-line bg-page text-[11px] uppercase tracking-wide text-muted">
               <th className="px-4 py-3 font-semibold">Name</th>
               <th className="px-4 py-3 font-semibold">SSID</th>
               <th className="px-4 py-3 font-semibold">IP</th>
@@ -182,7 +182,7 @@ export default async function NetworkPage() {
         </div>
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+            <tr className="border-b border-line bg-page text-[11px] uppercase tracking-wide text-muted">
               <th className="px-4 py-3 font-semibold">Name</th>
               <th className="px-4 py-3 font-semibold">Address</th>
               <th className="px-4 py-3 font-semibold">Type</th>

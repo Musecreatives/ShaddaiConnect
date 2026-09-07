@@ -147,7 +147,7 @@ export function SessionsClient({
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+            <tr className="border-b border-line bg-page text-[11px] uppercase tracking-wide text-muted">
               <th className="px-4 py-3 font-semibold">User</th>
               <th className="px-4 py-3 font-semibold">MAC</th>
               <th className="px-4 py-3 font-semibold">IP</th>

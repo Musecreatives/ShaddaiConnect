@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CustomersService } from './customers.service';
+import { NotifyPaymentGatewayIssueDto } from './dto/notify-payment-gateway-issue.dto';
 import { QueryCustomersDto } from './dto/query-customers.dto';
 
 @Controller('admin/customers')
@@ -26,5 +27,10 @@ export class AdminCustomersController {
   @Post('notify-failed-payments')
   notifyFailedPayments() {
     return this.customers.notifyFailedPayments();
+  }
+
+  @Post('notify-payment-gateway-issue')
+  notifyPaymentGatewayIssue(@Body() dto: NotifyPaymentGatewayIssueDto) {
+    return this.customers.notifyPaymentGatewayIssue(dto);
   }
 }

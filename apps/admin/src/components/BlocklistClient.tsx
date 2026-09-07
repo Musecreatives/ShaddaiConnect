@@ -112,7 +112,7 @@ export function BlocklistClient({ initialBlocked }: { initialBlocked: BlockedMac
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+            <tr className="border-b border-line bg-page text-[11px] uppercase tracking-wide text-muted">
               <th className="px-4 py-3 font-semibold">MAC address</th>
               <th className="px-4 py-3 font-semibold">Reason</th>
               <th className="px-4 py-3 font-semibold">Blocked</th>

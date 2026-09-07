@@ -72,6 +72,41 @@ export const SITE_SETTING_FIELDS: SiteSettingField[] = [
     multiline: false,
     maxLength: 300,
   },
+  {
+    key: 'social_facebook',
+    label: 'Facebook',
+    help: 'Full page URL, e.g. https://facebook.com/shaddaicommunications. Leave blank to hide the icon.',
+    multiline: false,
+    maxLength: 300,
+  },
+  {
+    key: 'social_instagram',
+    label: 'Instagram',
+    help: 'Full profile URL. Leave blank to hide the icon.',
+    multiline: false,
+    maxLength: 300,
+  },
+  {
+    key: 'social_x',
+    label: 'X (Twitter)',
+    help: 'Full profile URL. Leave blank to hide the icon.',
+    multiline: false,
+    maxLength: 300,
+  },
+  {
+    key: 'social_linkedin',
+    label: 'LinkedIn',
+    help: 'Full company/page URL. Leave blank to hide the icon.',
+    multiline: false,
+    maxLength: 300,
+  },
+  {
+    key: 'social_tiktok',
+    label: 'TikTok',
+    help: 'Full profile URL. Leave blank to hide the icon.',
+    multiline: false,
+    maxLength: 300,
+  },
 ];
 
 const FIELD_BY_KEY = new Map(SITE_SETTING_FIELDS.map((f) => [f.key, f]));

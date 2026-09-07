@@ -44,6 +44,24 @@ export function button(label: string, url: string): string {
   return `<a href="${url}" style="display:inline-block;background:#2E75C4;color:#FFFFFF;text-decoration:none;font-weight:700;padding:13px 24px;border-radius:13px;font-size:14px;">${label}</a>`;
 }
 
+/** Turns a plain-text body (blank line = paragraph break) into the same styled paragraphs every
+ * other template uses, wrapped in baseTemplate — the one place the admin Mailer's free-form
+ * composer (apps/admin's Mailer page) needs, since admins type plain text there, not HTML. */
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+export function plainBodyTemplate(body: string): string {
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const bodyHtml = paragraphs
+    .map((p) => `<p style="margin:0 0 14px;">${escapeHtml(p).replace(/\n/g, '<br />')}</p>`)
+    .join('');
+  return baseTemplate({ bodyHtml });
+}
+
 export function codeChip(code: string): string {
   return `<div style="background:#0D1B33;border-radius:16px;padding:22px;text-align:center;margin:18px 0;">
     <div style="color:#18C7D8;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:24px;letter-spacing:0.08em;font-weight:700;">${code}</div>

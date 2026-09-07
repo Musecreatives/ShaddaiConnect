@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailService } from '../email/email.service';
+import { paymentGatewayIssueTemplate } from '../email/templates/payment-gateway-issue.template';
 import { paymentReminderTemplate } from '../email/templates/payment-reminder.template';
 import { trialUpsellTemplate } from '../email/templates/trial-upsell.template';
 import { PrismaService } from '../prisma/prisma.service';
@@ -192,5 +193,22 @@ export class CustomersService {
     });
     this.logger.log(`Sent payment-reminder email to ${customers.length} customer(s).`);
     return { notified: customers.length };
+  }
+
+  /** Ad-hoc, admin-triggered — one email to one address, not tied to any Customer/Payment row
+   * (a failed checkout may not have left one) or to the dedup tracking the automated reminders
+   * use, since this is a manual one-off, not a recurring nudge. */
+  async notifyPaymentGatewayIssue(input: {
+    email: string;
+    name?: string;
+    planName?: string;
+  }): Promise<{ sent: boolean }> {
+    const sent = await this.email.send({
+      to: input.email,
+      subject: 'Your Shaddai WiFi payment — an issue on our end, not yours',
+      html: paymentGatewayIssueTemplate({ name: input.name, planName: input.planName }),
+    });
+    this.logger.log(`Sent payment-gateway-issue notice to ${input.email} (sent=${sent}).`);
+    return { sent };
   }
 }

@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { NewsletterForm } from './NewsletterForm';
-import { SHARES } from '@/lib/landing-data';
+import { hasAnySocialLink, SocialLinks } from './SocialLinks';
+import { getSiteSettings } from '@/lib/site-settings';
 
 const SUPPORT_EMAIL = 'support@shaddaicommunications.com';
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER;
@@ -16,7 +17,10 @@ const NAV_LINKS = [
   { href: '/careers', label: 'Careers' },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const settings = await getSiteSettings();
+  const hasSocialLinks = hasAnySocialLink(settings, WHATSAPP_NUMBER);
+
   return (
     <footer className="border-t border-line bg-page dark:border-line-dark dark:bg-page-dark">
       <div className="mx-auto w-full max-w-6xl px-6 py-14 sm:px-16">
@@ -54,19 +58,12 @@ export function SiteFooter() {
                 )}
               </div>
             </div>
-            <div>
-              <div className="mb-2 font-sans text-sm font-bold text-ink dark:text-white">Follow</div>
-              <div className="flex gap-2">
-                {SHARES.map((s) => (
-                  <span
-                    key={s}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-line font-sans text-xs font-bold text-ink dark:border-line-dark dark:text-white"
-                  >
-                    {s}
-                  </span>
-                ))}
+            {hasSocialLinks && (
+              <div>
+                <div className="mb-2 font-sans text-sm font-bold text-ink dark:text-white">Follow</div>
+                <SocialLinks settings={settings} whatsappNumber={WHATSAPP_NUMBER} />
               </div>
-            </div>
+            )}
           </div>
           <div>
             <div className="mb-1 font-sans text-sm font-bold text-ink dark:text-white">Newsletter</div>

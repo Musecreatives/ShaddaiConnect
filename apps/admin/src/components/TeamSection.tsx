@@ -54,27 +54,27 @@ export function TeamSection({
   }
 
   return (
-    <div className="rounded-card border border-line bg-surface">
-      <div className="flex items-center justify-between border-b border-line px-4 py-3">
-        <h2 className="font-display text-sm font-semibold text-ink">Team</h2>
+    <div className="overflow-hidden rounded-card border border-line bg-surface">
+      <div className="flex items-center justify-between border-b border-line bg-page px-5 py-4">
+        <h2 className="font-display text-base font-bold text-ink">Team</h2>
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
-          className="text-xs font-semibold text-brand-blue-deep"
+          className="rounded-btn bg-navy px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-brand-blue"
         >
           {showForm ? 'Cancel' : '+ Add admin'}
         </button>
       </div>
 
-      <div className="flex items-center justify-between border-b border-line px-4 py-3">
-        <span className="text-sm text-muted">Root (env-configured, always active)</span>
+      <div className="flex items-center justify-between border-b border-line px-5 py-4">
+        <span className="text-sm font-semibold text-muted">Root (env-configured, always active)</span>
         <span className="font-mono text-sm text-ink">{rootEmail ?? '—'}</span>
       </div>
 
       {admins.map((admin) => (
         <div
           key={admin.id}
-          className="flex items-center justify-between border-b border-line px-4 py-3 last:border-0"
+          className="flex items-center justify-between border-b border-line px-5 py-4 last:border-0"
         >
           <div>
             <span className="text-sm text-ink">{admin.name || admin.email}</span>

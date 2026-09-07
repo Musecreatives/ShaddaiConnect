@@ -177,6 +177,15 @@ function SiteContentIcon() {
   );
 }
 
+function MailerIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M4 6.5L12 13L20 6.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function SettingsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -213,6 +222,7 @@ const NAV_GROUPS = [
       { href: '/blocklist', label: 'Blocklist', Icon: BlocklistIcon },
       { href: '/audit-log', label: 'Audit Log', Icon: AuditLogIcon },
       { href: '/support', label: 'Support', Icon: SupportIcon },
+      { href: '/mailer', label: 'Mailer', Icon: MailerIcon },
     ],
   },
   {

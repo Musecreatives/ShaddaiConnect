@@ -46,14 +46,14 @@ export function CustomersTable({ customers }: { customers: CustomerRow[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="overflow-hidden rounded-card border border-line bg-surface">
+      <div className="flex flex-wrap items-center gap-3 border-b border-line p-4">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name, email, or phone…"
-          className="w-full max-w-sm rounded-btn border-[1.5px] border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-brand-blue focus:outline-none sm:w-80"
+          className="min-w-50 flex-1 rounded-btn border-[1.5px] border-line bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-muted focus:border-brand-blue focus:outline-none sm:max-w-sm"
         />
         <button
           type="button"
@@ -64,10 +64,10 @@ export function CustomersTable({ customers }: { customers: CustomerRow[] }) {
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+      <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+            <tr className="border-b border-line bg-page text-[11px] uppercase tracking-wide text-muted">
               <th className="px-4 py-3 font-semibold">Name</th>
               <th className="px-4 py-3 font-semibold">Contact</th>
               <th className="px-4 py-3 font-semibold">Vouchers</th>

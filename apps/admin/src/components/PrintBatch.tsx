@@ -18,7 +18,7 @@ function VoucherList({ vouchers }: { vouchers: Voucher[] }) {
   return (
     <table className="voucher-list w-full border-collapse text-left text-sm">
       <thead>
-        <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+        <tr className="border-b border-line bg-page text-[11px] uppercase tracking-wide text-muted">
           <th className="px-2 py-2">No.</th>
           <th className="px-2 py-2">Code</th>
           <th className="px-2 py-2">Plan</th>

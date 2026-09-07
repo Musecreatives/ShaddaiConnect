@@ -218,6 +218,21 @@ export function notifyFailedPayments(): Promise<{ notified: number }> {
   return apiFetch('/admin/customers/notify-failed-payments', { method: 'POST' });
 }
 
+export function sendMail(input: { to: string; subject: string; body: string }): Promise<{ sent: boolean }> {
+  return apiFetch('/admin/mailer/send', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function notifyPaymentGatewayIssue(input: {
+  email: string;
+  name?: string;
+  planName?: string;
+}): Promise<{ sent: boolean }> {
+  return apiFetch('/admin/customers/notify-payment-gateway-issue', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export interface NasRow {
   id: number;
   nasname: string;

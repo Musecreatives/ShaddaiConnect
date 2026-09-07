@@ -132,7 +132,7 @@ export function JournalClient({ initialPosts }: { initialPosts: Post[] }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
-              <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+              <tr className="border-b border-line bg-page text-[11px] uppercase tracking-wide text-muted">
                 <th className="px-4 py-3 font-semibold">Post</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Category</th>

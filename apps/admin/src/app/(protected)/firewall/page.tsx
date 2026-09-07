@@ -122,7 +122,7 @@ export default async function FirewallPage() {
             <div className="overflow-x-auto rounded-card border border-line bg-surface">
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+                  <tr className="border-b border-line bg-page text-[11px] uppercase tracking-wide text-muted">
                     <th className="px-4 py-3">Interface</th>
                     <th className="px-4 py-3">Action</th>
                     <th className="px-4 py-3">Proto</th>
@@ -174,7 +174,7 @@ export default async function FirewallPage() {
               <div className="overflow-x-auto rounded-card border border-line bg-surface">
                 <table className="w-full min-w-[600px] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-line text-[11px] uppercase tracking-wide text-muted">
+                    <tr className="border-b border-line bg-page text-[11px] uppercase tracking-wide text-muted">
                       <th className="px-4 py-3">Interface</th>
                       <th className="px-4 py-3">Proto</th>
                       <th className="px-4 py-3">Port</th>

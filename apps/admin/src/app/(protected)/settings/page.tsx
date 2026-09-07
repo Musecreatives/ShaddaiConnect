@@ -3,8 +3,8 @@ import { getAdminsServer, getSettingsServer } from '@/lib/server-api';
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between border-b border-line px-4 py-3 last:border-0">
-      <span className="text-sm text-muted">{label}</span>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4 last:border-0">
+      <span className="text-sm font-semibold text-muted">{label}</span>
       <span className="font-mono text-sm text-ink">{value}</span>
     </div>
   );
@@ -26,7 +26,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="rounded-card border border-line bg-surface">
-        <div className="border-b border-line px-4 py-3">
+        <div className="border-b border-line bg-page px-5 py-4">
           <h2 className="font-display text-sm font-semibold text-ink">Network</h2>
         </div>
         <Field label="RADIUS octet direction inverted" value={String(settings.radiusInvertOctets)} />
@@ -34,7 +34,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="rounded-card border border-line bg-surface">
-        <div className="border-b border-line px-4 py-3">
+        <div className="border-b border-line bg-page px-5 py-4">
           <h2 className="font-display text-sm font-semibold text-ink">Customer support channels</h2>
         </div>
         <Field label="WhatsApp Business number" value={whatsapp || 'Not set'} />
@@ -51,7 +51,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="rounded-card border border-line bg-surface">
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+        <div className="flex items-center justify-between border-b border-line bg-page px-5 py-4">
           <h2 className="font-display text-sm font-semibold text-ink">Notifications</h2>
           <span
             className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase ${
@@ -66,8 +66,8 @@ export default async function SettingsPage() {
           value={settings.ntfyConfigured ? 'Self-hosted, private' : 'Not set — see NTFY_URL/NTFY_TOPIC'}
         />
         {settings.ntfyConfigured && (
-          <div className="border-b border-line px-4 py-3 last:border-0">
-            <div className="mb-2 text-sm text-muted">Subscribed events</div>
+          <div className="border-b border-line px-5 py-4 last:border-0">
+            <div className="mb-2 text-sm font-semibold text-muted">Subscribed events</div>
             <div className="flex flex-wrap gap-2">
               {['Free trial signup', 'New payment', 'Waitlist signup', 'Support message', 'Device blocked'].map(
                 (event) => (
