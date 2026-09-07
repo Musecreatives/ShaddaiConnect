@@ -42,7 +42,19 @@ export class AdminsService {
   }
 }
 
-function toDto(admin: { id: number; email: string; name: string | null; active: boolean; createdAt: Date }): AdminUserDto {
+function toDto(admin: {
+  id: number;
+  email: string;
+  name: string | null;
+  active: boolean;
+  createdAt: Date;
+}): AdminUserDto {
   // Deliberately excludes passwordHash — never returned by the API, even to other admins.
-  return { id: admin.id, email: admin.email, name: admin.name, active: admin.active, createdAt: admin.createdAt };
+  return {
+    id: admin.id,
+    email: admin.email,
+    name: admin.name,
+    active: admin.active,
+    createdAt: admin.createdAt,
+  };
 }

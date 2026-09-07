@@ -48,7 +48,8 @@ export class TrialFeedbackRequestService {
     const customers = await this.prisma.customer.findMany({ where: { id: { in: customerIds } } });
     const customerById = new Map(customers.map((c) => [c.id, c]));
 
-    const feedbackBaseUrl = this.config.get<string>('CUSTOMER_APP_URL') || 'https://buy.shaddaicommunications.com';
+    const feedbackBaseUrl =
+      this.config.get<string>('CUSTOMER_APP_URL') || 'https://buy.shaddaicommunications.com';
     const giveUpCutoff = new Date(Date.now() - GIVE_UP_AFTER_MS);
 
     let sent = 0;

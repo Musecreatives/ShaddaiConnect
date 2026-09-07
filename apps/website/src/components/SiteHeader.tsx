@@ -1,36 +1,45 @@
 import Image from 'next/image';
 import Link from 'next/link';
-
-const BUY_URL = process.env.NEXT_PUBLIC_BUY_URL ?? 'https://buy.shaddaicommunications.com';
+import { ThemeToggle } from './ThemeToggle';
 
 const NAV_LINKS = [
-  { href: '/#pricing', label: 'WiFi Plans' },
+  { href: '/work', label: 'Our Work' },
   { href: '/services', label: 'Services' },
-  { href: '/#faq', label: 'FAQ' },
+  { href: '/about', label: 'About' },
+  { href: '/journal', label: 'Journal' },
+  { href: '/audit', label: 'Free Review' },
+  { href: '/careers', label: 'Careers' },
 ];
 
+/* Header stays a fixed dark navy in both themes (matching the imported design) rather than
+   flipping with ThemeToggle — it's a deliberate brand bar, not page content. */
 export function SiteHeader() {
   return (
-    <nav className="border-b border-line-dark px-6 py-5 sm:px-16">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-6">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-navy">
+      <nav className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-3 px-6 py-4 sm:px-10">
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="Shaddai Communications" width={30} height={30} className="shrink-0" />
-          <span className="font-display text-[15px] font-bold text-white">SHADDAI</span>
+          <Image src="/logo.png" alt="Shaddai Communications" width={32} height={32} className="shrink-0" />
+          <span className="font-display text-[17px] font-normal tracking-wide text-white">SHADDAI</span>
         </Link>
-        <div className="ml-auto flex items-center gap-6 font-mono text-xs uppercase tracking-wide text-white/40">
+        <div className="ml-auto hidden items-center gap-0.5 font-sans text-sm font-semibold lg:flex">
           {NAV_LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className="hidden transition-colors hover:text-white sm:inline">
+            <Link
+              key={link.href}
+              href={link.href}
+              className="rounded-btn px-3 py-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            >
               {link.label}
             </Link>
           ))}
         </div>
-        <a
-          href={BUY_URL}
-          className="rounded-btn bg-brand-blue px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-blue-deep"
+        <ThemeToggle />
+        <Link
+          href="/contact"
+          className="rounded-full bg-white px-5 py-2.5 font-sans text-sm font-bold text-navy transition-colors hover:bg-brand-blue-light"
         >
-          Buy a voucher →
-        </a>
-      </div>
-    </nav>
+          Request a Consultation
+        </Link>
+      </nav>
+    </header>
   );
 }

@@ -6,18 +6,28 @@ import type {
   AdminUserRow,
   AuditLogEntry,
   BlockedMac,
+  Category,
   CustomerRow,
+  FirewallStatus,
   FraudSignal,
+  MediaAsset,
   NetworkOverview,
   Plan,
+  Post,
+  RepeatTrialDevice,
   SessionRow,
+  SiteSettingsPayload,
   SupportTicket,
   TrialFeedbackRow,
   Voucher,
   WaitlistRow,
 } from './api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
+/** Every fetch in this file runs server-side, so prefer the internal address: the public
+ * hostname routes out through Cloudflare and back for no reason (1.28s vs 1.7ms measured), since
+ * the API is on this same host. Falls back to the public URL when unset. */
+const API_URL =
+  process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
 /** Server Component fetch — forwards the browser's cookies explicitly (see lib/auth.ts). */
 async function serverFetch<T>(path: string): Promise<T> {
@@ -34,8 +44,9 @@ export function getStatsServer(): Promise<AdminStats> {
   return serverFetch<AdminStats>('/admin/stats');
 }
 
-export function getVouchersServer(): Promise<Voucher[]> {
-  return serverFetch<Voucher[]>('/admin/vouchers');
+export function getVouchersServer(filter?: { ids?: string }): Promise<Voucher[]> {
+  const qs = filter?.ids ? `?ids=${encodeURIComponent(filter.ids)}` : '';
+  return serverFetch<Voucher[]>(`/admin/vouchers${qs}`);
 }
 
 export function getPlansServer(): Promise<Plan[]> {
@@ -80,6 +91,18 @@ export function getTrialFeedbackServer(): Promise<TrialFeedbackRow[]> {
   return serverFetch('/admin/trial-feedback');
 }
 
+export function getRepeatTrialDevicesServer(): Promise<RepeatTrialDevice[]> {
+  return serverFetch('/admin/trial-feedback/repeat-devices');
+}
+
+export function getSiteSettingsServer(): Promise<SiteSettingsPayload> {
+  return serverFetch('/admin/site-settings');
+}
+
+export function getFirewallStatusServer(): Promise<FirewallStatus> {
+  return serverFetch('/admin/firewall');
+}
+
 export function getSupportTicketsServer(): Promise<SupportTicket[]> {
   return serverFetch('/admin/support-tickets');
 }
@@ -97,4 +120,20 @@ export function getReminderCountsServer(): Promise<{
   paymentReminderPending: number;
 }> {
   return serverFetch('/admin/customers/reminder-counts');
+}
+
+export function getPostsServer(): Promise<Post[]> {
+  return serverFetch('/admin/journal/posts');
+}
+
+export function getPostServer(id: number): Promise<Post> {
+  return serverFetch(`/admin/journal/posts/${id}`);
+}
+
+export function getCategoriesServer(): Promise<Category[]> {
+  return serverFetch('/admin/journal/categories');
+}
+
+export function getMediaServer(): Promise<MediaAsset[]> {
+  return serverFetch('/admin/media');
 }

@@ -1,6 +1,5 @@
 import { NotifyCustomersButton } from '@/components/NotifyCustomersButton';
 import { CustomersTable } from '@/components/CustomersTable';
-import { notifyFailedPayments, notifyTrialUpsell } from '@/lib/api';
 import { getCustomersServer, getReminderCountsServer } from '@/lib/server-api';
 
 export default async function CustomersPage() {
@@ -21,13 +20,13 @@ export default async function CustomersPage() {
             pendingCount={reminderCounts.trialUpsellPending}
             label="Nudge trial-only"
             confirmText={`Email ${reminderCounts.trialUpsellPending} trial-only customer(s) about paid plans? Each gets this once.`}
-            action={notifyTrialUpsell}
+            kind="trialUpsell"
           />
           <NotifyCustomersButton
             pendingCount={reminderCounts.paymentReminderPending}
             label="Nudge failed payments"
             confirmText={`Email ${reminderCounts.paymentReminderPending} customer(s) with a failed payment? Each gets this once.`}
-            action={notifyFailedPayments}
+            kind="failedPayments"
           />
         </div>
       </div>

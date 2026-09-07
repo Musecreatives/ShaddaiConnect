@@ -3,13 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import type { Payment } from '@prisma/client';
 import { EmailService } from '../email/email.service';
+import { checkoutStartedTemplate } from '../email/templates/checkout-started.template';
 import { voucherTemplate } from '../email/templates/voucher.template';
 import { NtfyService } from '../ntfy/ntfy.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VouchersService } from '../vouchers/vouchers.service';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
 import { QueryPaymentsDto } from './dto/query-payments.dto';
-import { PaystackService } from './paystack.service';
+import { FlutterwaveService } from './flutterwave.service';
 
 export interface PaymentStatusResult {
   reference: string;
@@ -45,7 +46,7 @@ export class PaymentsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly paystack: PaystackService,
+    private readonly flutterwave: FlutterwaveService,
     private readonly vouchers: VouchersService,
     private readonly config: ConfigService,
     private readonly email: EmailService,
@@ -60,14 +61,25 @@ export class PaymentsService {
     let customer = await this.prisma.customer.findFirst({ where: { email: dto.email } });
     if (!customer) {
       customer = await this.prisma.customer.create({
-        data: { email: dto.email, phone: dto.phone },
+        data: { email: dto.email, phone: dto.phone, name: dto.fullName },
+      });
+    } else {
+      // Backfill rather than overwrite: an existing row may have come from the waitlist or a
+      // free trial with only some fields, and the customer has just re-entered all of them.
+      // Overwriting a name they set earlier with the same data is harmless; losing one isn't.
+      customer = await this.prisma.customer.update({
+        where: { id: customer.id },
+        data: {
+          name: customer.name ?? dto.fullName,
+          phone: customer.phone ?? dto.phone,
+        },
       });
     }
 
     const reference = `SHDI-${randomUUID()}`;
     await this.prisma.payment.create({
       data: {
-        paystackReference: reference,
+        reference,
         planId: plan.id,
         customerId: customer.id,
         amountNaira: plan.priceNaira,
@@ -76,86 +88,129 @@ export class PaymentsService {
     });
 
     const frontendUrl = this.config.get<string>('CUSTOMER_APP_URL');
-    // Paystack always appends its own `?reference=...&trxref=...` on redirect — don't add
-    // `?reference=` here too, or the customer lands on `/success?reference=X&reference=X`
-    // (Next.js parses repeated query keys as an array, breaking the status lookup).
-    const { authorization_url } = await this.paystack.initializeTransaction({
+    // Flutterwave appends its own `?status=...&tx_ref=...&transaction_id=...` on redirect (not
+    // `?reference=`, unlike Paystack) — don't add our own query params here or they'd collide.
+    const { authorization_url } = await this.flutterwave.initializeTransaction({
       email: dto.email,
       amountNaira: Number(plan.priceNaira),
       reference,
       callbackUrl: frontendUrl ? `${frontendUrl}/success` : undefined,
     });
 
+    // Sent before payment completes, so an interrupted checkout (lost signal, closed tab, bank
+    // app took over) leaves a working link in the inbox rather than forcing a restart. Not
+    // awaited-on-failure: email.send() never throws, and a mail problem must not block the
+    // redirect to Flutterwave — the purchase matters more than the receipt.
+    await this.email.send({
+      to: dto.email,
+      subject: `Complete your ${plan.name} purchase`,
+      html: checkoutStartedTemplate({
+        planName: plan.name,
+        amountNaira: Number(plan.priceNaira),
+        paymentUrl: authorization_url,
+      }),
+    });
+
     return { authorizationUrl: authorization_url, reference };
   }
 
-  /** Called by the webhook handler once the raw-body HMAC signature has been verified. */
+  /**
+   * Called by the controller once the `verif-hash` header has been checked against our
+   * configured secret. That alone isn't trusted for amount/status, though — Flutterwave's own
+   * security guidance is to independently verify server-side by the transaction id (not the
+   * tx_ref we sent them) before acting on a webhook body.
+   */
   async handleWebhookEvent(
-    event: { event: string; data: { reference: string } },
+    event: { event?: string; data?: { id?: number; tx_ref?: string; status?: string } },
     rawPayload: string,
   ) {
-    if (event.event !== 'charge.success') {
-      this.logger.log(`Ignoring Paystack event: ${event.event}`);
+    // Not gated on `event.event` — confirmed live 2026-09-03 that a genuine successful
+    // bank-transfer payment arrived with `event: undefined` (a real payload, verified against
+    // Flutterwave's own transactions API: status "successful", amount matched). Whatever the
+    // documented event-name values are, they're evidently not reliable across every payment
+    // method. The transaction id is what actually matters — it's what verifyTransactionById
+    // checks against Flutterwave's own trusted API response, and that response's status/amount/
+    // currency (checked below) is the real security gate, not this event's self-reported claim.
+    if (!event.data?.id) {
+      this.logger.warn(
+        `Flutterwave webhook with no transaction id, event="${event.event}": ${rawPayload.slice(0, 500)}`,
+      );
       return;
     }
-    await this.processSuccessfulPayment(event.data.reference, rawPayload);
+
+    const verified = await this.flutterwave.verifyTransactionById(event.data.id);
+    if (verified.status !== 'successful') {
+      this.logger.log(
+        `Flutterwave transaction ${verified.tx_ref} not successful (${verified.status}), ignoring`,
+      );
+      return;
+    }
+
+    const payment = await this.prisma.payment.findUnique({ where: { reference: verified.tx_ref } });
+    if (!payment) {
+      this.logger.warn(`Flutterwave webhook for unknown reference ${verified.tx_ref}`);
+      return;
+    }
+    if (Number(payment.amountNaira) !== verified.amount || verified.currency !== 'NGN') {
+      this.logger.error(
+        `Flutterwave amount/currency mismatch for ${verified.tx_ref}: expected ₦${payment.amountNaira}, got ${verified.amount} ${verified.currency}`,
+      );
+      return;
+    }
+
+    await this.processSuccessfulPayment(verified.tx_ref, rawPayload);
   }
 
   async getStatus(reference: string): Promise<PaymentStatusResult> {
-    const payment = await this.prisma.payment.findUnique({
-      where: { paystackReference: reference },
-    });
+    const payment = await this.prisma.payment.findUnique({ where: { reference } });
     if (!payment) throw new NotFoundException(`Payment ${reference} not found`);
 
     let current = payment;
     if (current.status === 'pending') {
-      current = await this.pollPaystackAsFallback(current);
+      current = await this.pollFlutterwaveAsFallback(current);
     }
 
     return this.toStatusResult(current);
   }
 
   /**
-   * Belt-and-braces for the customer success-page poll: if Paystack's webhook hasn't
-   * landed yet, actively check with Paystack instead of leaving the customer staring at a
-   * "pending" screen. Safe to call repeatedly — processSuccessfulPayment is idempotent.
+   * Belt-and-braces for the customer success-page poll: if Flutterwave's webhook hasn't landed
+   * yet, actively check instead of leaving the customer staring at a "pending" screen. Safe to
+   * call repeatedly — processSuccessfulPayment is idempotent.
    */
-  private async pollPaystackAsFallback(payment: Payment): Promise<Payment> {
+  private async pollFlutterwaveAsFallback(payment: Payment): Promise<Payment> {
     try {
-      const verification = await this.paystack.verifyTransaction(payment.paystackReference);
-      if (verification.status === 'success') {
-        return this.processSuccessfulPayment(
-          payment.paystackReference,
-          JSON.stringify(verification),
-        );
+      const verification = await this.flutterwave.verifyTransactionByReference(payment.reference);
+      if (verification?.status === 'successful') {
+        return this.processSuccessfulPayment(payment.reference, JSON.stringify(verification));
       }
     } catch (err) {
-      this.logger.warn(`Paystack verify fallback failed for ${payment.paystackReference}: ${err}`);
+      this.logger.warn(`Flutterwave verify fallback failed for ${payment.reference}: ${err}`);
     }
     return payment;
   }
 
   /**
-   * Idempotent on paystack_reference (CLAUDE.md non-negotiable) — Paystack retries webhooks,
-   * and the status-poll fallback can race the webhook, so both must be safe to call twice.
-   * `updateMany` with `status: 'pending'` in the WHERE clause makes the claim atomic: only one
-   * caller ever sees `count === 1` and proceeds to issue a voucher.
+   * Idempotent on `reference` (CLAUDE.md non-negotiable) — Flutterwave retries webhooks, and the
+   * status-poll fallback can race the webhook, so both must be safe to call twice. `updateMany`
+   * with `status: 'pending'` in the WHERE clause makes the claim atomic: only one caller ever
+   * sees `count === 1` and proceeds to issue a voucher.
    */
   private async processSuccessfulPayment(reference: string, rawPayload: string): Promise<Payment> {
     let issuedVoucherId: number | undefined;
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const payment = await tx.payment.findUnique({ where: { paystackReference: reference } });
+      const payment = await tx.payment.findUnique({ where: { reference } });
       if (!payment) throw new NotFoundException(`Payment ${reference} not found`);
       if (payment.status === 'success') return payment;
 
       const claimed = await tx.payment.updateMany({
-        where: { paystackReference: reference, status: 'pending' },
+        where: { reference, status: 'pending' },
         data: { status: 'success', rawPayload },
       });
       if (claimed.count === 0) {
         // Lost the race to another concurrent call — it already handled issuance.
-        return tx.payment.findUniqueOrThrow({ where: { paystackReference: reference } });
+        return tx.payment.findUniqueOrThrow({ where: { reference } });
       }
 
       const voucher = await this.vouchers.issueInTx(tx, payment.planId!, {
@@ -251,7 +306,7 @@ export class PaymentsService {
       total,
       payments: payments.map((p) => ({
         id: p.id,
-        reference: p.paystackReference,
+        reference: p.reference,
         amountNaira: Number(p.amountNaira),
         status: p.status,
         createdAt: p.createdAt,
@@ -304,14 +359,14 @@ export class PaymentsService {
   private async toStatusResult(payment: Payment): Promise<PaymentStatusResult> {
     const amountNaira = Number(payment.amountNaira);
     if (payment.status !== 'success' || !payment.voucherId) {
-      return { reference: payment.paystackReference, status: payment.status, amountNaira };
+      return { reference: payment.reference, status: payment.status, amountNaira };
     }
     const voucher = await this.prisma.voucher.findUnique({
       where: { id: payment.voucherId },
       include: { plan: true },
     });
     return {
-      reference: payment.paystackReference,
+      reference: payment.reference,
       status: payment.status,
       amountNaira,
       voucherCode: voucher?.code,

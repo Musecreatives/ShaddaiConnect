@@ -4,11 +4,11 @@ This file gives Claude Code the context it needs to work on this project effecti
 
 ## What this project is
 
-Voucher management portal for **Shaddai Comm Ventures**, a community WiFi hotspot business in Ugbowo BDPA Estate, Benin City, Nigeria. Customers buy time-based internet vouchers (Paystack), redeem them on a pfSense captive portal, and are authenticated via FreeRADIUS backed by MariaDB.
+Voucher management portal for **Shaddai Comm Ventures**, a community WiFi hotspot business in Ugbowo BDPA Estate, Benin City, Nigeria. Customers buy time-based internet vouchers (Flutterwave), redeem them on a pfSense captive portal, and are authenticated via FreeRADIUS backed by MariaDB.
 
 Three apps in this monorepo:
-- `apps/api` — **NestJS** API (voucher issuance, Paystack webhook, admin ops)
-- `apps/customer` — **Next.js** public buy site (plan selection → Paystack → voucher code + QR)
+- `apps/api` — **NestJS** API (voucher issuance, Flutterwave webhook, admin ops)
+- `apps/customer` — **Next.js** public buy site (plan selection → Flutterwave → voucher code + QR)
 - `apps/admin` — **Next.js** admin console (manual vouchers, sessions, revenue, plans)
 
 ## Infrastructure that ALREADY EXISTS (do not recreate)
@@ -29,7 +29,7 @@ FreeRADIUS standard tables: `radcheck`, `radreply`, `radgroupcheck`, `radgroupre
 Business tables:
 - `plans(id, name, plan_type enum('hourly','monthly'), price_naira, duration_hours, validity_days, simultaneous_use, data_cap_mb, bandwidth_down_kbps, bandwidth_up_kbps, active, created_at)`
 - `vouchers(id, code UNIQUE, plan_id FK, customer_id, status enum('unused','active','expired','disabled'), simultaneous_use_override, amount_paid, created_at, activated_at, expires_at)`
-- `payments(id, paystack_reference UNIQUE, voucher_id, plan_id, customer_id, amount_naira, status enum('pending','success','failed'), raw_payload, created_at)`
+- `payments(id, reference UNIQUE, voucher_id, plan_id, customer_id, amount_naira, status enum('pending','success','failed'), raw_payload, created_at)` — `reference` is OUR OWN generated id (`SHDI-<uuid>`), sent to the payment provider as its transaction reference; the provider never issues it. Renamed from `paystack_reference` 2026-09-02 when the provider switched to Flutterwave — the column was never conceptually Paystack-specific.
 - `devices(id, voucher_id, mac_address, first_seen, last_seen)` — analytics only, NOT enforcement
 - `customers(id, phone, email, name, created_at)`
 
@@ -49,13 +49,16 @@ Rollback ALL on any failure. Never leave a vouchers row without radcheck rows or
 
 `SHADDAI-XXXXX` — 5 chars from alphabet `ABCDEFGHJKMNPQRSTUVWXYZ23456789` (no O/0/I/1/L). Check DB uniqueness on insert; retry on collision. QR encodes the bare code or `?code=SHADDAI-XXXXX` URL param (portal page parses both).
 
-## Paystack rules (non-negotiable)
+## Flutterwave rules (non-negotiable)
 
-- Webhook handler MUST verify `x-paystack-signature` (HMAC-SHA512 of RAW request body with secret key) before trusting anything.
-- MUST be idempotent on `paystack_reference` — Paystack retries; never mint two vouchers for one reference.
+**Switched from Paystack 2026-09-02** — different auth model, don't assume Paystack's rules carry over:
+- Webhook handler MUST verify the `verif-hash` header against `FLUTTERWAVE_WEBHOOK_SECRET_HASH` — a **plain string comparison** (still timing-safe), NOT an HMAC. This is a value *we* choose and paste into Flutterwave's dashboard (Settings → Webhooks → Secret Hash); Flutterwave just echoes it back verbatim. Confirmed against Flutterwave's own webhook docs — don't "fix" this into an HMAC by analogy with Paystack, that would be wrong for this provider.
+- Signature check alone is NOT sufficient to trust amount/status — Flutterwave's own guidance is to independently re-verify server-side via `GET /transactions/{id}/verify` (by Flutterwave's numeric id from the webhook payload, not by our `reference`) before issuing anything. `PaymentsService.handleWebhookEvent` does this.
+- MUST be idempotent on `reference` — Flutterwave retries; never mint two vouchers for one reference.
 - Respond 200 quickly; do heavy work after ack if needed.
-- Secret key server-side only (NestJS env). Frontend gets public key only.
-- Use Paystack TEST keys until launch.
+- Secret key server-side only (NestJS env, `FLUTTERWAVE_SECRET_KEY`). This project uses the Standard/hosted checkout flow (API initializes server-side, hands back a redirect URL) — no public key is needed client-side, unlike Flutterwave's inline/widget checkout mode.
+- Redirect query params differ from Paystack: Flutterwave appends `?status=...&tx_ref=...&transaction_id=...`, not `?reference=...` — the customer app's `/success` page reads `tx_ref`.
+- Use Flutterwave TEST keys until launch.
 
 ## Dev environment notes (Windows + Claude Code)
 
@@ -75,13 +78,32 @@ Rollback ALL on any failure. Never leave a vouchers row without radcheck rows or
 
 ## Infra boundaries
 
-Never attempt to SSH into, reconfigure, or enable services on the pfSense VM
-(192.168.1.1). pfSense is managed manually via its web UI only. The API's
-only infra dependency is MariaDB via the documented SSH tunnel.
+**Updated 2026-08-30, user-approved:** pfSense (192.168.1.1) integration is now in scope,
+specifically to solve real-time device blocking — RADIUS CoA/Disconnect-Request is confirmed
+**not implemented** by pfSense's Captive Portal (pfSense Redmine #13625, still open), so the
+API's existing CoA-based disconnect (`CoaService`) can never actually kick an active session; it
+only prevents a disabled voucher's *next* reconnect. The two mechanisms that do work, because
+they're pfSense acting on its own state rather than an external RADIUS client asking it to:
+- The captive portal's own MAC pass-through/deny list (Services → Captive Portal → zone → MACs) —
+  enforced at the firewall level continuously, not just at login.
+- The captive portal's native session table + disconnect action (Status → Captive Portal), which
+  is what powers pfSense's own "Concurrent user logins: Last login" behavior.
+
+Building on these from the API requires talking to pfSense itself — via its REST API package if
+installed, or SSH otherwise. This is now allowed, but stay conservative: prefer the REST API over
+raw SSH/config-file edits when both are possible, never touch pfSense's WAN-facing rules or
+anything outside the captive portal / MACs scope without asking first, and treat any pfSense
+change as live-production (same caution as a docker deploy — confirm before anything that could
+disconnect real users or misconfigure the portal). The prior blanket "web UI only, never touch it"
+rule is superseded for this purpose; it still applies to anything outside captive-portal device
+management (e.g. don't touch WAN/firewall rules, VPN, or other services on pfSense).
+
+The API's other infra dependency, MariaDB, is still only reached via the documented SSH tunnel —
+unchanged.
 
 ## What NOT to do
 
 - Do not modify the FreeRADIUS or MariaDB container configs from this repo — infra is managed on the server (`~/shaddai-billing`).
 - Do not write to `radacct` (FreeRADIUS owns it; API reads only).
-- Do not use MAC addresses for enforcement (Simultaneous-Use is the mechanism; MACs are analytics). **One scoped exception** (added 2026-08-06, user-approved): `VoucherActivationService.blockRepeatTrialDevices` disables a newly-activated **Free Trial** voucher if its device's MAC already appears on an earlier Free Trial voucher's session history — an anti-abuse guard for the free-trial flow specifically, not general concurrent-use enforcement. Nowhere else in the codebase should use MAC for auth/access decisions.
-- Do not put the Paystack secret key, DB passwords, or RADIUS shared secret in code or docs.
+- MAC-based enforcement was historically restricted to RADIUS-level effects (disabling a voucher's radcheck rows) with one scoped exception (`VoucherActivationService.blockRepeatTrialDevices`, added 2026-08-06 — disables a newly-activated Free Trial voucher on MAC reuse). **Extended 2026-08-30, user-approved:** the admin "Block device" action (and the trial-reuse guard) may now also push the MAC to pfSense's captive portal deny list (see Infra boundaries above), since that's the only mechanism that actually blocks a device in real time rather than just preventing the next voucher reconnect. This is still narrowly scoped to abuse/blocklist enforcement, not a general license to key access control off MAC anywhere else.
+- Do not put the Flutterwave secret key/webhook secret hash, DB passwords, or RADIUS shared secret in code or docs.

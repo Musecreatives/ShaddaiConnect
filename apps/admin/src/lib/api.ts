@@ -330,6 +330,99 @@ export function getTrialFeedback(): Promise<TrialFeedbackRow[]> {
   return apiFetch('/admin/trial-feedback');
 }
 
+export interface RepeatTrialDeviceUsage {
+  voucherCode: string;
+  firstSeen: string;
+  customer: { name: string | null; phone: string | null; email: string | null } | null;
+}
+
+export interface RepeatTrialDevice {
+  macAddress: string;
+  usageCount: number;
+  usages: RepeatTrialDeviceUsage[];
+}
+
+export function getRepeatTrialDevices(): Promise<RepeatTrialDevice[]> {
+  return apiFetch('/admin/trial-feedback/repeat-devices');
+}
+
+export interface FirewallStatus {
+  rules: {
+    interface: string;
+    action: string;
+    disabled: boolean;
+    protocol: string;
+    source: string;
+    destination: string;
+    port: string;
+    gateway: string;
+    description: string;
+  }[];
+  nat: {
+    interface: string;
+    protocol: string;
+    destination_port: string;
+    target: string;
+    local_port: string;
+    disabled: boolean;
+    description: string;
+  }[];
+  gateways: {
+    name: string;
+    status: string;
+    substatus: string;
+    delay: string;
+    loss: string;
+    monitor: string;
+  }[];
+  wireguard: {
+    packageInstalled: boolean;
+    tunnels: { name: string; enabled: boolean; address: string; description: string }[];
+  };
+  openvpnClients: { description: string; server: string; disabled: boolean }[];
+}
+
+export interface SiteSettingField {
+  key: string;
+  label: string;
+  help: string;
+  multiline: boolean;
+  maxLength: number;
+}
+
+export interface SiteSettingsPayload {
+  fields: SiteSettingField[];
+  values: Record<string, string>;
+}
+
+export function getSiteSettings(): Promise<SiteSettingsPayload> {
+  return apiFetch('/admin/site-settings');
+}
+
+export function updateSiteSettings(patch: Record<string, string>): Promise<Record<string, string>> {
+  return apiFetch('/admin/site-settings', { method: 'PATCH', body: JSON.stringify(patch) });
+}
+
+/** Uploads a file for one of the `_image`-suffixed site-settings fields and returns its URL —
+ * the caller then treats that URL like any other field value via updateSiteSettings. */
+export async function uploadSiteSettingImage(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_URL}/admin/site-settings/upload`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  if (res.status === 401 && typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(body?.message ?? `Request failed (${res.status})`, res.status);
+  }
+  return res.json();
+}
+
 export function notifyWaitlistLaunch(): Promise<{ notified: number }> {
   return apiFetch('/admin/waitlist/notify', { method: 'POST' });
 }
@@ -452,6 +545,119 @@ export interface DisconnectResult {
 
 export function disconnectVoucher(code: string): Promise<DisconnectResult> {
   return apiFetch(`/admin/vouchers/${encodeURIComponent(code)}/disconnect`, { method: 'POST' });
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  createdAt: string;
+  _count?: { posts: number };
+}
+
+export function getCategories(): Promise<Category[]> {
+  return apiFetch('/admin/journal/categories');
+}
+
+export function createCategory(input: { name: string; slug: string }): Promise<Category> {
+  return apiFetch('/admin/journal/categories', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function updateCategory(id: number, input: { name?: string; slug?: string }): Promise<Category> {
+  return apiFetch(`/admin/journal/categories/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export function deleteCategory(id: number): Promise<{ deleted: true }> {
+  return apiFetch(`/admin/journal/categories/${id}`, { method: 'DELETE' });
+}
+
+export type PostStatus = 'draft' | 'review' | 'scheduled' | 'published';
+
+export interface Post {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  body: string;
+  status: PostStatus;
+  categoryId: number | null;
+  category: Category | null;
+  featuredImage: string | null;
+  featured: boolean;
+  authorName: string | null;
+  publishAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PostInput {
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  body: string;
+  status?: PostStatus;
+  categoryId?: number | null;
+  featuredImage?: string | null;
+  featured?: boolean;
+  authorName?: string | null;
+  publishAt?: string | null;
+}
+
+export function getPosts(): Promise<Post[]> {
+  return apiFetch('/admin/journal/posts');
+}
+
+export function getPost(id: number): Promise<Post> {
+  return apiFetch(`/admin/journal/posts/${id}`);
+}
+
+export function createPost(input: PostInput): Promise<Post> {
+  return apiFetch('/admin/journal/posts', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function updatePost(id: number, input: Partial<PostInput>): Promise<Post> {
+  return apiFetch(`/admin/journal/posts/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export function deletePost(id: number): Promise<{ deleted: true }> {
+  return apiFetch(`/admin/journal/posts/${id}`, { method: 'DELETE' });
+}
+
+export interface MediaAsset {
+  id: number;
+  filename: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
+}
+
+export function getMedia(): Promise<MediaAsset[]> {
+  return apiFetch('/admin/media');
+}
+
+export async function uploadMedia(file: File): Promise<MediaAsset> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_URL}/admin/media/upload`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  if (res.status === 401 && typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(body?.message ?? `Request failed (${res.status})`, res.status);
+  }
+  return res.json();
+}
+
+export function deleteMedia(id: number): Promise<{ deleted: true }> {
+  return apiFetch(`/admin/media/${id}`, { method: 'DELETE' });
 }
 
 export { ApiError };

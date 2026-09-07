@@ -9,7 +9,7 @@ export class AdminSettingsController {
 
   /**
    * Read-only, non-secret operational config for the admin Settings page. Never add
-   * JWT_SECRET/DATABASE_URL/PAYSTACK_SECRET_KEY/etc. here — this endpoint is reachable by any
+   * JWT_SECRET/DATABASE_URL/FLUTTERWAVE_SECRET_KEY/etc. here — this endpoint is reachable by any
    * authenticated admin and is meant purely for "what's currently configured" visibility.
    */
   @Get()
@@ -24,7 +24,9 @@ export class AdminSettingsController {
       // Booleans only — never the topic/URL itself, which is the closest thing ntfy has to a
       // shared secret (anyone who knows it can post to or read the admin alert feed).
       ntfyConfigured: Boolean(this.config.get('NTFY_URL') && this.config.get('NTFY_TOPIC')),
-      pushConfigured: Boolean(this.config.get('VAPID_PUBLIC_KEY') && this.config.get('VAPID_PRIVATE_KEY')),
+      pushConfigured: Boolean(
+        this.config.get('VAPID_PUBLIC_KEY') && this.config.get('VAPID_PRIVATE_KEY'),
+      ),
     };
   }
 }

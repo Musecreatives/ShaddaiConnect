@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { ApiError, initializePayment, type Plan } from '@/lib/api';
+import { subscribeToPaymentPush } from '@/lib/push';
 
 export function CheckoutForm({ plan }: { plan: Plan }) {
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -23,10 +25,24 @@ export function CheckoutForm({ plan }: { plan: Plan }) {
     try {
       const result = await initializePayment({
         planId: plan.id,
-        email,
-        phone: phone || undefined,
+        fullName: fullName.trim(),
+        email: email.trim(),
+        // Strip spaces/dashes people naturally type ("080 1234 5678") so the server's
+        // digits-only check doesn't reject an otherwise valid number.
+        phone: phone.replace(/[\s-]/g, ''),
         termsAccepted,
       });
+
+      // Register this browser against the payment reference so an abandoned payment can be
+      // nudged later (AbandonedPaymentService). Silent by default — it only registers if the
+      // customer already granted notification permission, since prompting mid-purchase would
+      // cost more sales than the nudge recovers. Never allowed to block the redirect.
+      try {
+        await subscribeToPaymentPush(result.reference);
+      } catch {
+        /* push is a nice-to-have; the purchase matters more */
+      }
+
       window.location.href = result.authorizationUrl;
     } catch (err) {
       setError(
@@ -40,6 +56,25 @@ export function CheckoutForm({ plan }: { plan: Plan }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="fullName" className="text-sm font-medium text-ink">
+          Full name
+        </label>
+        <input
+          id="fullName"
+          type="text"
+          required
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="First and last name"
+          autoComplete="name"
+          // Mirrors the server-side rule so the browser catches it before a round trip.
+          pattern="[A-Za-zÀ-ÿ'\-]{2,}(\s+[A-Za-zÀ-ÿ'\-]{2,})+"
+          title="Enter your first and last name"
+          className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
+        />
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <label htmlFor="email" className="text-sm font-medium text-ink">
           Email
@@ -58,16 +93,23 @@ export function CheckoutForm({ plan }: { plan: Plan }) {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="phone" className="text-sm font-medium text-ink">
-          Phone <span className="text-muted">(optional)</span>
+          Phone
         </label>
         <input
           id="phone"
           type="tel"
+          required
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="080X XXX XXXX"
+          placeholder="08012345678"
+          autoComplete="tel"
+          inputMode="numeric"
+          // Allows the spaces/dashes people type; they're stripped before submit.
+          pattern="(0[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{4}|(\+?234)[\s-]?\d{10})"
+          title="Enter a valid Nigerian phone number, e.g. 08012345678"
           className="rounded-btn border-[1.5px] border-line px-4 py-3 text-[15px] outline-none focus:border-brand-blue"
         />
+        <p className="text-xs text-muted">So we can reach you about this purchase.</p>
       </div>
 
       <ul className="flex flex-col gap-1.5 rounded-card bg-page p-4 text-xs text-muted">

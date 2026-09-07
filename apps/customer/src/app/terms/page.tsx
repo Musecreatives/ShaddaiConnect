@@ -72,7 +72,7 @@ export default function TermsPage() {
 
         <Section title="7. Payments and refunds">
           <p>
-            Prices are shown in Naira (₦) and charged via Paystack at the time of purchase. Once a
+            Prices are shown in Naira (₦) and charged via Flutterwave at the time of purchase. Once a
             voucher code has been issued to you, the sale is final — we do not offer refunds,
             except where a payment was charged in error and no voucher was issued (contact us to
             resolve this).

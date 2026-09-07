@@ -1,13 +1,39 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { AppModule } from './app.module';
 
+/**
+ * `JSON.stringify` throws on BigInt, and this schema has several BigInt columns —
+ * `plans.data_cap_mb` plus radacct's octet counters — so any endpoint returning one of those rows
+ * raw dies with "Do not know how to serialize a BigInt". That stayed hidden while every plan had
+ * a NULL data cap; the moment a real cap was set, GET /api/admin/vouchers (which does
+ * `include: { plan: true }`) started 500ing and took the whole admin dashboard down (2026-08-31).
+ *
+ * Serialising as Number rather than String keeps the JSON shape the admin/customer apps already
+ * expect for these fields. Precision is a non-issue here: the largest of them is a byte counter,
+ * and Number stays exact to 9 petabytes.
+ */
+(BigInt.prototype as unknown as { toJSON: () => number }).toJSON = function (this: bigint) {
+  return Number(this);
+};
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   app.setGlobalPrefix('api');
+  // Uploaded images (site-settings CMS fields) — served at /uploads, deliberately outside the
+  // /api prefix so it reads as a plain static asset path, not a JSON endpoint. Global prefix only
+  // applies to controller routes, not this Express static middleware. multer's diskStorage
+  // (site-settings.controller.ts) doesn't create its destination directory itself, and this needs
+  // to survive container recreates, hence the docker-compose volume mount at this same path.
+  const uploadsDir = join(__dirname, '..', 'uploads');
+  mkdirSync(uploadsDir, { recursive: true });
+  app.useStaticAssets(uploadsDir, { prefix: '/uploads' });
   // contentSecurityPolicy is meaningful for HTML responses; this is a pure JSON API, so it's
   // disabled rather than left to produce a header no browser here ever acts on. The rest of
   // helmet's defaults (X-Content-Type-Options, X-Frame-Options, etc.) still apply.

@@ -2,19 +2,25 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { BuyShell } from '@/components/BuyShell';
 import { PlanPicker } from '@/components/PlanPicker';
-import { getPublicPlans } from '@/lib/api';
+import { getPublicPlans, getSiteSettings } from '@/lib/api';
 
 export default async function Home() {
   // Server Component fetch — if the API is briefly unreachable (cold start after a deploy,
   // network blip), fail soft into an inline message instead of throwing and triggering Next's
   // generic full-page crash screen (no custom error.tsx existed for this before).
-  let plans: Awaited<ReturnType<typeof getPublicPlans>> = [];
-  let plansFailed = false;
-  try {
-    plans = await getPublicPlans();
-  } catch {
-    plansFailed = true;
-  }
+  // Fetched in parallel, not sequentially — these don't depend on each other, and awaiting them
+  // one after the other doubled the page's render time. Each settles independently so a failure
+  // in one can't blank the other (a missing banner is invisible; a missing plan list isn't).
+  const [plansResult, settingsResult] = await Promise.allSettled([
+    getPublicPlans(),
+    getSiteSettings(),
+  ]);
+
+  const plansFailed = plansResult.status === 'rejected';
+  const plans = plansResult.status === 'fulfilled' ? plansResult.value : [];
+  const settings = settingsResult.status === 'fulfilled' ? settingsResult.value : {};
+  const announcement = settings.announcement ?? '';
+  const coverageNote = settings.coverage_note ?? '';
 
   return (
     <BuyShell>
@@ -29,6 +35,15 @@ export default async function Home() {
           <div className="text-[11px] text-muted">Ugbowo BDPA Estate</div>
         </div>
       </a>
+
+      {announcement && (
+        <div
+          className="animate-fade-slide-in rounded-card border border-amber/30 bg-amber-tint px-4 py-3 text-sm leading-relaxed text-ink"
+          style={{ animationDelay: '20ms' }}
+        >
+          {announcement}
+        </div>
+      )}
 
       <div className="animate-fade-slide-in" style={{ animationDelay: '40ms' }}>
         <div className="mb-1 font-mono text-[10.5px] font-bold uppercase tracking-[0.09em] text-brand-blue-deep">
@@ -52,6 +67,12 @@ export default async function Home() {
         </p>
       ) : (
         <PlanPicker plans={plans} />
+      )}
+
+      {coverageNote && (
+        <p className="rounded-card border border-line bg-page px-4 py-3 text-[12.5px] leading-relaxed text-muted">
+          {coverageNote}
+        </p>
       )}
 
       <div className="flex items-center gap-2.5 text-[11px] uppercase tracking-wide text-muted">

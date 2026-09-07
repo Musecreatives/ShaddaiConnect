@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { PfsenseService } from '../pfsense/pfsense.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VouchersService } from './vouchers.service';
 
@@ -36,7 +37,11 @@ describe('VouchersService', () => {
     radCheck: { create: jest.Mock; deleteMany: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
     radReply: { create: jest.Mock };
   };
-  let prisma: { $transaction: jest.Mock; voucher: { findUnique: jest.Mock }; plan: { findUniqueOrThrow: jest.Mock } };
+  let prisma: {
+    $transaction: jest.Mock;
+    voucher: { findUnique: jest.Mock };
+    plan: { findUniqueOrThrow: jest.Mock };
+  };
 
   beforeEach(async () => {
     tx = {
@@ -61,7 +66,16 @@ describe('VouchersService', () => {
     };
 
     const module = await Test.createTestingModule({
-      providers: [VouchersService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        VouchersService,
+        { provide: PrismaService, useValue: prisma },
+        // findStatus() asks pfSense whether a code is genuinely online. null = "pfSense
+        // unreachable", which makes it fall back to radacct — the behaviour these tests assume.
+        {
+          provide: PfsenseService,
+          useValue: { listSessionsCached: jest.fn().mockResolvedValue(null) },
+        },
+      ],
     }).compile();
 
     service = module.get(VouchersService);
@@ -129,7 +143,9 @@ describe('VouchersService', () => {
       await service.issue(MONTHLY_PLAN.id);
 
       expect(tx.radReply.create).not.toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ attribute: 'Session-Timeout' }) }),
+        expect.objectContaining({
+          data: expect.objectContaining({ attribute: 'Session-Timeout' }),
+        }),
       );
     });
 

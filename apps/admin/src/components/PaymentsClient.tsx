@@ -62,7 +62,7 @@ export function PaymentsClient({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-xl font-bold text-ink">Payments</h1>
-          <p className="mt-1 text-sm text-muted">{total} total · synced from Paystack.</p>
+          <p className="mt-1 text-sm text-muted">{total} total · synced from Flutterwave.</p>
         </div>
         <button
           type="button"
@@ -106,15 +106,17 @@ export function PaymentsClient({
             {payments.map((payment) => (
               <tr key={payment.id} className="border-b border-line last:border-0">
                 <td className="px-4 py-3 font-mono">
-                  {/* Best-effort deep link — Paystack's dashboard URL scheme isn't publicly
-                      documented; verify this actually lands on the transaction before relying
-                      on it, or replace with dashboard.paystack.com and search manually. */}
+                  {/* Not a verified deep link — Flutterwave's dashboard search URL scheme
+                      hasn't been confirmed to land directly on a transaction. This opens the
+                      transactions list; search for the reference shown once there. Fix this
+                      link once the exact query-param format is confirmed against a real
+                      dashboard search. */}
                   <a
-                    href={`https://dashboard.paystack.com/#/transactions?query=${payment.reference}`}
+                    href="https://dashboard.flutterwave.com/dashboard/transactions"
                     target="_blank"
                     rel="noreferrer"
                     className="text-brand-blue-deep underline"
-                    title="Open in Paystack dashboard"
+                    title="Open Flutterwave dashboard — search for this reference"
                   >
                     {payment.reference}
                   </a>

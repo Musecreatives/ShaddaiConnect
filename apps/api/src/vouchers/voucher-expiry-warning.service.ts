@@ -82,7 +82,9 @@ export class VoucherExpiryWarningService {
       const key = `monthly:${voucher.code}`;
       if (this.warned.has(key) || !voucher.expiresAt) continue;
 
-      const remainingHours = Math.ceil((voucher.expiresAt.getTime() - now.getTime()) / (60 * 60 * 1000));
+      const remainingHours = Math.ceil(
+        (voucher.expiresAt.getTime() - now.getTime()) / (60 * 60 * 1000),
+      );
       this.warned.add(key);
       this.push.sendToVoucher(voucher.code, {
         title: 'Your plan expires soon',

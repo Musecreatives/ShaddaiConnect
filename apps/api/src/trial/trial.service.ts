@@ -1,4 +1,12 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EmailService } from '../email/email.service';
+import { trialVoucherTemplate } from '../email/templates/trial-voucher.template';
 import { NtfyService } from '../ntfy/ntfy.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VouchersService } from '../vouchers/vouchers.service';
@@ -20,7 +28,37 @@ export class TrialService {
     private readonly prisma: PrismaService,
     private readonly vouchers: VouchersService,
     private readonly ntfy: NtfyService,
+    private readonly email: EmailService,
+    private readonly config: ConfigService,
   ) {}
+
+  /** Shared by both TrialVerificationService.requestCode() (so a dead/paused trial fails before
+   * an OTP email is even sent) and claim() itself (defense in depth against the trial being
+   * deactivated in the gap between a customer requesting and verifying their code). */
+  async findActiveTrialPlan() {
+    const plan = await this.prisma.plan.findFirst({ where: { name: TRIAL_PLAN_NAME } });
+    if (!plan) {
+      throw new NotFoundException(
+        'Free trial is not set up yet — create a plan named "Free Trial" in the admin Plans page.',
+      );
+    }
+    if (!plan.active) {
+      // Not ConflictException (409) — the customer app treats any 409 from this flow as "already
+      // claimed a free trial" and would show the wrong message here.
+      throw new BadRequestException(
+        'Free trial is not available right now — check out our paid plans instead.',
+      );
+    }
+    return plan;
+  }
+
+  /** Non-throwing counterpart to findActiveTrialPlan(), for the public buy site: lets the trial
+   * page show "temporarily unavailable" up front instead of letting someone fill in the whole
+   * form and only fail at the end. */
+  async availability(): Promise<{ available: boolean }> {
+    const plan = await this.prisma.plan.findFirst({ where: { name: TRIAL_PLAN_NAME } });
+    return { available: !!plan?.active };
+  }
 
   async claim(
     phone: string,
@@ -28,12 +66,7 @@ export class TrialService {
     fullName?: string,
     locationNote?: string,
   ): Promise<{ code: string }> {
-    const plan = await this.prisma.plan.findFirst({ where: { name: TRIAL_PLAN_NAME } });
-    if (!plan) {
-      throw new NotFoundException(
-        'Free trial is not set up yet — create a plan named "Free Trial" in the admin Plans page.',
-      );
-    }
+    const plan = await this.findActiveTrialPlan();
 
     // Matches on phone OR email — either one having already claimed is enough to block a repeat,
     // so switching one field doesn't get you a second trial.
@@ -72,6 +105,19 @@ export class TrialService {
       title: 'New free trial signup',
       message: `${voucher.code} registered for a free trial`,
       tags: ['bust_in_silhouette'],
+    });
+
+    // Emailed as well as shown on screen: the code is otherwise only visible on the page that
+    // issued it, so closing the tab loses it entirely. Best-effort — the voucher already exists
+    // and works, so a mail failure must not turn a successful claim into an error.
+    await this.email.send({
+      to: email,
+      subject: 'Your Shaddai WiFi free trial code',
+      html: trialVoucherTemplate({
+        code: voucher.code,
+        minutes: Math.round(TRIAL_SESSION_SECONDS / 60),
+        buyUrl: this.config.get<string>('CUSTOMER_APP_URL'),
+      }),
     });
 
     return { code: voucher.code };

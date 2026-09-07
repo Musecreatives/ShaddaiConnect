@@ -1,9 +1,10 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { RequestTrialCodeDto } from './dto/request-trial-code.dto';
 import { SubmitTrialFeedbackDto } from './dto/submit-trial-feedback.dto';
 import { VerifyTrialCodeDto } from './dto/verify-trial-code.dto';
 import { TrialFeedbackService } from './trial-feedback.service';
+import { TrialService } from './trial.service';
 import { TrialVerificationService } from './trial-verification.service';
 
 @Controller('trial')
@@ -11,6 +12,7 @@ export class TrialController {
   constructor(
     private readonly verification: TrialVerificationService,
     private readonly feedback: TrialFeedbackService,
+    private readonly trial: TrialService,
   ) {}
 
   // The old unverified POST /trial (phone+email only, no domain/code check) was removed
@@ -20,6 +22,12 @@ export class TrialController {
   // Public and unauthenticated by design (no payment involved) — rate-limited for the same
   // reason as /vouchers/:code/status and /payments/initialize (see .docs/DECISIONS.md security
   // hardening pass): cheap to hammer otherwise, and this sends a real email per call.
+  /** Public: lets the buy site render "free trial paused" instead of a form that will fail. */
+  @Get('availability')
+  availability() {
+    return this.trial.availability();
+  }
+
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('request-code')
   requestCode(@Body() dto: RequestTrialCodeDto) {

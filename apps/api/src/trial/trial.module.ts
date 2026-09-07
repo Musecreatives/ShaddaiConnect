@@ -11,6 +11,11 @@ import { TrialVerificationService } from './trial-verification.service';
 @Module({
   imports: [VouchersModule, EmailModule],
   controllers: [TrialController, AdminTrialFeedbackController],
-  providers: [TrialService, TrialFeedbackService, TrialFeedbackRequestService, TrialVerificationService],
+  providers: [
+    TrialService,
+    TrialFeedbackService,
+    TrialFeedbackRequestService,
+    TrialVerificationService,
+  ],
 })
 export class TrialModule {}

@@ -1,4 +1,4 @@
-import { getTrialFeedbackServer } from '@/lib/server-api';
+import { getRepeatTrialDevicesServer, getTrialFeedbackServer } from '@/lib/server-api';
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -26,7 +26,10 @@ const BUY_BADGE: Record<string, string> = {
 };
 
 export default async function TrialFeedbackPage() {
-  const feedback = await getTrialFeedbackServer();
+  const [feedback, repeatDevices] = await Promise.all([
+    getTrialFeedbackServer(),
+    getRepeatTrialDevicesServer(),
+  ]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -37,6 +40,46 @@ export default async function TrialFeedbackPage() {
           coverage needs work.
         </p>
       </div>
+
+      {repeatDevices.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-display text-sm font-bold text-ink">
+            Repeat trial devices ({repeatDevices.length})
+          </h2>
+          <div className="flex flex-col gap-2">
+            {repeatDevices.map((device) => (
+              <div
+                key={device.macAddress}
+                className="rounded-card border border-danger/30 bg-danger-tint p-4"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs font-semibold text-danger">{device.macAddress}</span>
+                  <span className="rounded-full bg-danger px-2 py-0.5 text-[10.5px] font-bold uppercase text-white">
+                    {device.usageCount} trial claims
+                  </span>
+                </div>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {device.usages.map((usage) => (
+                    <li key={usage.voucherCode} className="text-xs text-ink/80">
+                      <span className="font-mono font-semibold">{usage.voucherCode}</span>
+                      {' — '}
+                      {formatDate(usage.firstSeen)}
+                      {usage.customer && (
+                        <span className="text-muted">
+                          {' · '}
+                          {[usage.customer.name, usage.customer.phone, usage.customer.email]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         {feedback.map((f) => (

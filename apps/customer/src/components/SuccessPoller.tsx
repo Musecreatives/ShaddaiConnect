@@ -47,8 +47,9 @@ export function SuccessPoller({ reference }: { reference: string }) {
       <div className="flex flex-col items-center gap-3 py-16 text-center">
         <div className="flex items-center gap-1.5 text-xs text-muted">
           Secured by
-          <span className="rounded-[5px] bg-[#00C3F7] px-1.5 py-0.5 font-display text-[11px] font-bold text-[#001A2E]">
-            Paystack
+          {/* Approximate Flutterwave orange — swap for their exact brand hex if you have it. */}
+          <span className="rounded-[5px] bg-[#FF7A00] px-1.5 py-0.5 font-display text-[11px] font-bold text-white">
+            Flutterwave
           </span>
         </div>
         <div className="mt-4 h-9 w-9 animate-spin rounded-full border-[3px] border-line border-t-brand-blue" />
@@ -57,7 +58,7 @@ export function SuccessPoller({ reference }: { reference: string }) {
             ? `Confirming your payment of ₦${status.amountNaira.toLocaleString('en-NG')}…`
             : 'Confirming your payment…'}
         </p>
-        <p className="text-xs text-muted">Card, bank transfer, or USSD — handled by Paystack.</p>
+        <p className="text-xs text-muted">Card, bank transfer, or USSD — handled by Flutterwave.</p>
       </div>
     );
   }

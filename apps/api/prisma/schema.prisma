@@ -25,6 +25,39 @@ model Customer {
   @@map("customers")
 }
 
+/// Editable copy for the public buy site AND the marketing website (shaddaicommunications.com) —
+/// extended 2026-09-05 to also cover the marketing site's hero subtext and About page (text +
+/// image) so wording/image changes don't need a code change and redeploy. Deliberately a flat
+/// key/value store rather than a CMS: the set of editable strings is small and known, and the
+/// admin UI renders a fixed list of fields against it (see SITE_SETTING_FIELDS). Image fields
+/// (keys ending `_image`) still just store a URL string — see AdminSiteSettingsController's
+/// `upload` endpoint for how that URL gets populated.
+model SiteSetting {
+  key       String   @id @db.VarChar(64)
+  value     String   @db.Text
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("site_settings")
+}
+
+/// Pending free-trial email verification codes. Persisted rather than in-memory: an API restart
+/// used to wipe every in-flight code, so anyone mid-signup silently got a code that no longer
+/// worked — which is exactly what a deploy during business hours caused on 2026-08-31. Keyed by
+/// lowercased email (one live code per address), TTL 10 minutes, cleaned up opportunistically.
+model TrialOtp {
+  email        String   @id @db.VarChar(128)
+  code         String   @db.VarChar(6)
+  fullName     String   @map("full_name") @db.VarChar(128)
+  phone        String   @db.VarChar(32)
+  locationNote String   @map("location_note") @db.VarChar(255)
+  attempts     Int      @default(0)
+  expiresAt    DateTime @map("expires_at") @db.DateTime(0)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([expiresAt], map: "expires_at")
+  @@map("trial_otps")
+}
+
 model Device {
   id         Int       @id @default(autoincrement()) @db.UnsignedInt
   voucherId  Int       @map("voucher_id") @db.UnsignedInt
@@ -54,7 +87,10 @@ model Nas {
 
 model Payment {
   id                Int           @id @default(autoincrement()) @db.UnsignedInt
-  paystackReference String        @unique(map: "paystack_reference") @map("paystack_reference") @db.VarChar(100)
+  /** Our own generated id (`SHDI-<uuid>`), sent to the payment provider as its transaction
+   * reference — not something the provider issues. Renamed from paystack_reference 2026-09-02
+   * when the provider was switched to Flutterwave; the concept was never Paystack-specific. */
+  reference         String        @unique(map: "reference") @map("reference") @db.VarChar(100)
   voucherId         Int?          @map("voucher_id") @db.UnsignedInt
   planId            Int?          @map("plan_id") @db.UnsignedInt
   customerId        Int?          @map("customer_id") @db.UnsignedInt
@@ -281,10 +317,14 @@ model PushSubscription {
   auth         String   @db.VarChar(255)
   voucherCode  String?  @map("voucher_code") @db.VarChar(32)
   adminEmail   String?  @map("admin_email") @db.VarChar(255)
+  /// Set at checkout, before any voucher exists, so an abandoned payment can still be nudged
+  /// ("you didn't finish paying"). Swapped for voucherCode once the webhook issues the voucher.
+  paymentReference String? @map("payment_reference") @db.VarChar(128)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(0)
 
   @@index([voucherCode], map: "voucher_code")
   @@index([adminEmail], map: "admin_email")
+  @@index([paymentReference], map: "payment_reference")
   @@map("push_subscriptions")
 }
 
@@ -370,4 +410,69 @@ enum SupportTicketStatus {
   resolved
 
   @@map("support_tickets_status")
+}
+
+/// Journal category (marketing site /journal) — added 2026-09-06 for the admin CMS. Kept to a
+/// short, admin-curated list (see the Admin design's "keep the list short — five or fewer" note)
+/// rather than free-form tags.
+model Category {
+  id        Int      @id @default(autoincrement()) @db.UnsignedInt
+  name      String   @db.VarChar(64)
+  slug      String   @unique(map: "slug") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  posts     Post[]
+
+  @@map("categories")
+}
+
+/// Journal post (marketing site /journal) — added 2026-09-06 for the admin CMS. `body` is plain
+/// text/paragraphs (split on blank lines when rendered), not HTML or markdown — deliberately
+/// simple rather than a half-built rich-text format with no matching editor.
+model Post {
+  id            Int        @id @default(autoincrement()) @db.UnsignedInt
+  title         String     @db.VarChar(200)
+  slug          String     @unique(map: "slug") @db.VarChar(200)
+  excerpt       String?    @db.VarChar(300)
+  body          String     @db.Text
+  status        PostStatus @default(draft)
+  categoryId    Int?       @map("category_id") @db.UnsignedInt
+  featuredImage String?    @map("featured_image") @db.VarChar(300)
+  featured      Boolean    @default(false)
+  authorName    String?    @map("author_name") @db.VarChar(128)
+  /// Only meaningful when status = scheduled; the post is surfaced publicly once this passes
+  /// (checked at read time, no cron needed — see JournalService.isVisible).
+  publishAt     DateTime?  @map("publish_at") @db.DateTime(0)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamp(0)
+  category      Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull, onUpdate: Restrict, map: "fk_post_category")
+
+  @@index([categoryId], map: "category_id")
+  @@index([status], map: "status")
+  @@map("posts")
+}
+
+/// Uploaded files available to the admin Media Library, independent of where they end up used
+/// (post featured images, site-settings `_image` fields, etc.) — those still just store the
+/// resulting `/uploads/...` path as a plain string; this table is what makes the library able to
+/// list and reuse a previously-uploaded file instead of re-uploading it.
+model MediaAsset {
+  id        Int      @id @default(autoincrement()) @db.UnsignedInt
+  filename  String   @db.VarChar(255)
+  path      String   @db.VarChar(300)
+  mimeType  String   @map("mime_type") @db.VarChar(100)
+  size      Int      @db.UnsignedInt
+  width     Int?     @db.UnsignedInt
+  height    Int?     @db.UnsignedInt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@map("media_assets")
+}
+
+enum PostStatus {
+  draft
+  review
+  scheduled
+  published
+
+  @@map("posts_status")
 }

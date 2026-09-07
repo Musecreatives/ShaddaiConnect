@@ -2,29 +2,36 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ApiError } from '@/lib/api';
+import { useConfirm } from '@/components/DialogProvider';
+import { ApiError, notifyFailedPayments, notifyTrialUpsell } from '@/lib/api';
+
+const ACTIONS = {
+  trialUpsell: notifyTrialUpsell,
+  failedPayments: notifyFailedPayments,
+} as const;
 
 export function NotifyCustomersButton({
   pendingCount,
   label,
   confirmText,
-  action,
+  kind,
 }: {
   pendingCount: number;
   label: string;
   confirmText: string;
-  action: () => Promise<{ notified: number }>;
+  kind: keyof typeof ACTIONS;
 }) {
   const router = useRouter();
+  const confirmDialog = useConfirm();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
   async function handleClick() {
-    if (!confirm(confirmText)) return;
+    if (!(await confirmDialog(confirmText, { title: label }))) return;
     setLoading(true);
     setResult(null);
     try {
-      const { notified } = await action();
+      const { notified } = await ACTIONS[kind]();
       setResult(`Sent to ${notified}.`);
       router.refresh();
     } catch (err) {

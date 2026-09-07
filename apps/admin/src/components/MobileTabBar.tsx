@@ -68,7 +68,7 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky bottom-0 z-30 flex border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav className="sticky bottom-0 z-30 flex border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden print:hidden">
       {TABS.map((tab) => {
         const active = pathname === tab.href;
         return (

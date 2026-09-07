@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname, '..', '..'),
   },
+  // Starlink/CCTV and Website/Software Development were merged into one page each
+  // (2026-09-05) — these old slugs may still be indexed/bookmarked.
+  async redirects() {
+    return [
+      { source: '/services/starlink', destination: '/services/networking', permanent: true },
+      { source: '/services/cctv', destination: '/services/networking', permanent: true },
+      { source: '/services/website-development', destination: '/services/software-development', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

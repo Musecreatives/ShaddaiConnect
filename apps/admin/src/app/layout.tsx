@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { fontVariables } from '@shaddai/ui';
+import { DialogProvider } from '@/components/DialogProvider';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
+import { adminFontVariables } from '@/fonts';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -21,7 +23,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0D1B33',
+  themeColor: '#06263B',
 };
 
 export default function RootLayout({
@@ -30,10 +32,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${fontVariables} h-full antialiased`}>
+    <html lang="en" className={`${fontVariables} ${adminFontVariables} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-page font-sans text-ink">
         <ServiceWorkerRegister />
-        {children}
+        <DialogProvider>{children}</DialogProvider>
       </body>
     </html>
   );

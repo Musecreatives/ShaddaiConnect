@@ -2,6 +2,7 @@ import { ConflictException, Injectable, Logger, NotFoundException } from '@nestj
 import { AuditService } from '../audit/audit.service';
 import { CoaService } from '../coa/coa.service';
 import { NtfyService } from '../ntfy/ntfy.service';
+import { PfsenseService } from '../pfsense/pfsense.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { VouchersService } from '../vouchers/vouchers.service';
 
@@ -15,6 +16,7 @@ export class BlockedMacsService {
     private readonly ntfy: NtfyService,
     private readonly coa: CoaService,
     private readonly audit: AuditService,
+    private readonly pfsense: PfsenseService,
   ) {}
 
   findAll() {
@@ -53,16 +55,22 @@ export class BlockedMacsService {
       where: { code: { in: codes }, status: { in: ['unused', 'active'] } },
     });
 
-    let disconnectedCount = 0;
+    // The portal-level block is the part that actually stops this device: disabling vouchers
+    // only stops the codes it already has, so the same device could just claim a new one (the
+    // exact free-trial abuse pattern seen 2026-08-30). A pfSense captive-portal block stops it
+    // regardless of which code it obtains, and cuts its current session in the same call.
+    const portalBlock = await this.pfsense.blockMac(normalized);
+    if (!portalBlock.ok) {
+      this.logger.warn(`Portal-level block for ${normalized} failed: ${portalBlock.message}`);
+    }
+    let disconnectedCount = portalBlock.data?.sessions_killed ?? 0;
+
     for (const voucher of vouchersToDisable) {
       await this.vouchers.disable(voucher.id);
-      // Best-effort — disabling radcheck already stops the *next* reconnect regardless of
-      // whether this succeeds; a live kick is a bonus, not a requirement for blocking to work.
-      const result = await this.coa.disconnectVoucher(voucher.code);
-      if (result.success) disconnectedCount++;
-      if (result.attempted) {
-        this.logger.log(`Disconnect attempt for ${voucher.code}: ${result.message}`);
-      }
+      // Belt-and-braces: the portal block above already cut this device off, but a voucher can
+      // have been used from more than one device, so kick anything else still on this code.
+      const result = await this.pfsense.disconnect(voucher.code);
+      if (result.ok && result.data) disconnectedCount += result.data.disconnected;
     }
 
     if (vouchersToDisable.length > 0) {
@@ -93,13 +101,22 @@ export class BlockedMacsService {
     const existing = await this.prisma.blockedMac.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException(`Blocked MAC ${id} not found`);
     await this.prisma.blockedMac.delete({ where: { id } });
+    // Must mirror block()'s portal entry — without this the device stays blocked at pfSense
+    // forever even though the admin UI shows it as unblocked.
+    const portal = await this.pfsense.unblockMac(existing.macAddress);
+    if (!portal.ok) {
+      this.logger.warn(
+        `Removed ${existing.macAddress} from the blocklist, but the pfSense portal block could not be lifted: ${portal.message}`,
+      );
+    }
     await this.audit.record({
       adminEmail,
       adminId,
       action: 'unblock_mac',
       targetType: 'mac',
       targetId: existing.macAddress,
+      detail: portal.ok ? 'portal block lifted' : `portal block NOT lifted: ${portal.message}`,
     });
-    return { unblocked: true };
+    return { unblocked: true, portalBlockLifted: portal.ok };
   }
 }

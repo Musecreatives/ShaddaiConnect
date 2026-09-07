@@ -43,7 +43,7 @@ export class CambiumSnmpService {
       return { configured: false, rssiDbm: null, connectionStatus: null, ssid: null };
     }
 
-    const session = snmp.createSession(this.host!, this.community, { timeout: 3000 });
+    const session = snmp.createSession(this.host, this.community, { timeout: 3000 });
     try {
       // Queried independently, not as one batched get() — a single OID net-snmp can't resolve
       // (e.g. connectionStatus, which doesn't exist on a Force180; the OIDs here were originally

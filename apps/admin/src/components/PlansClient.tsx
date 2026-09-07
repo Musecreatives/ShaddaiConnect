@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useConfirm, useToast } from '@/components/DialogProvider';
 import { ApiError, deletePlan, updatePlan, type Plan } from '@/lib/api';
 import { PlanFormModal } from './PlanFormModal';
 
@@ -10,6 +11,8 @@ function formatDuration(plan: Plan): string {
 }
 
 export function PlansClient({ initialPlans }: { initialPlans: Plan[] }) {
+  const confirmDialog = useConfirm();
+  const toast = useToast();
   const [plans, setPlans] = useState(initialPlans);
   const [editing, setEditing] = useState<Plan | 'new' | null>(null);
 
@@ -27,14 +30,18 @@ export function PlansClient({ initialPlans }: { initialPlans: Plan[] }) {
   }
 
   async function handleDelete(plan: Plan) {
-    if (!window.confirm(`Delete "${plan.name}"? This cannot be undone.`)) return;
+    const ok = await confirmDialog(`Delete "${plan.name}"? This cannot be undone.`, {
+      title: 'Delete plan',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await deletePlan(plan.id);
       setPlans((prev) => prev.filter((p) => p.id !== plan.id));
     } catch (err) {
       // Most common case: the api rejects deletion because vouchers already reference this
       // plan (FK constraint) — its message already explains to deactivate instead.
-      window.alert(err instanceof ApiError ? err.message : 'Failed to delete plan.');
+      toast(err instanceof ApiError ? err.message : 'Failed to delete plan.');
     }
   }
 

@@ -11,4 +11,9 @@ export class AdminTrialFeedbackController {
   findAll() {
     return this.feedback.findAllForAdmin();
   }
+
+  @Get('repeat-devices')
+  repeatDevices() {
+    return this.feedback.findRepeatTrialDevices();
+  }
 }

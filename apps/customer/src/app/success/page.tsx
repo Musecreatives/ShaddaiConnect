@@ -4,11 +4,13 @@ import { SuccessPoller } from '@/components/SuccessPoller';
 export default async function SuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reference?: string | string[] }>;
+  // Flutterwave appends `?status=...&tx_ref=...&transaction_id=...` on redirect — `tx_ref` is
+  // our own reference, the equivalent of what Paystack used to send back as `?reference=`.
+  searchParams: Promise<{ tx_ref?: string | string[] }>;
 }) {
-  const { reference: rawReference } = await searchParams;
-  // Defensive: a repeated query key (e.g. `?reference=X&reference=X`) parses as an array —
-  // take the first value rather than let it flow into a broken multi-value lookup downstream.
+  const { tx_ref: rawReference } = await searchParams;
+  // Defensive: a repeated query key parses as an array — take the first value rather than let
+  // it flow into a broken multi-value lookup downstream.
   const reference = Array.isArray(rawReference) ? rawReference[0] : rawReference;
   if (!reference) redirect('/');
 

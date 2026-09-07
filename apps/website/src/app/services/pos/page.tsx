@@ -1,5 +1,4 @@
 import { ServicePageTemplate } from '@/components/ServicePageTemplate';
-import { SERVICE_ICONS } from '@/components/ServiceVisual';
 
 export const metadata = { title: 'POS & Business Tools — Shaddai Communications' };
 
@@ -8,7 +7,7 @@ export default function PosServicePage() {
     <ServicePageTemplate
       eyebrow="POS & business tools"
       title="A digital till for tracking sales and stock"
-      icon={SERVICE_ICONS.pos}
+      imageSrc="/images/services/pos.jpg"
       description="A simple digital point-of-sale for tracking sales, stock, and daily takings — built for shops and small businesses around the estate."
       ctaLabel="Get a quote"
       quoteMessage="Hi, I'd like a quote for a POS portal for my business."

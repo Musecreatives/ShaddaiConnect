@@ -25,7 +25,7 @@ export function Topbar({
   }
 
   return (
-    <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface/85 px-4 py-3.5 backdrop-blur-md sm:px-7">
+    <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface/85 px-4 py-3.5 backdrop-blur-md sm:px-7 print:hidden">
       <div className="flex items-center gap-3">
         <button
           type="button"

@@ -7,5 +7,8 @@ export function paymentReminderTemplate(opts: { name?: string; buyUrl: string })
     <div style="text-align:center;margin:22px 0;">${button('Try again', opts.buyUrl)}</div>
     <p style="margin:0;">Any trouble, just reply to this email and we'll sort it out.<br />Shaddai Comm Ventures</p>
   `;
-  return baseTemplate({ preheader: 'Your last payment did not go through — no charge was made.', bodyHtml });
+  return baseTemplate({
+    preheader: 'Your last payment did not go through — no charge was made.',
+    bodyHtml,
+  });
 }

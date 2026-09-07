@@ -15,6 +15,27 @@ export type PushSubscribeResult = 'subscribed' | 'denied' | 'unsupported';
  * code so the backend knows which device to alert on that voucher's events. Safe to call
  * repeatedly — an existing subscription for this browser/site just gets reused. */
 export async function subscribeToVoucherPush(voucherCode: string): Promise<PushSubscribeResult> {
+  return subscribeInternal({ voucherCode });
+}
+
+/**
+ * Subscribes against a payment reference instead of a voucher — used on the checkout page,
+ * where no voucher exists yet, so an abandoned payment can still be nudged
+ * (AbandonedPaymentService). `silent` skips the permission prompt unless the customer has
+ * already granted it: interrupting someone mid-purchase to ask for notifications would cost
+ * more sales than the nudge recovers.
+ */
+export async function subscribeToPaymentPush(
+  paymentReference: string,
+  { silent = true }: { silent?: boolean } = {},
+): Promise<PushSubscribeResult> {
+  if (silent && Notification.permission !== 'granted') return 'denied';
+  return subscribeInternal({ paymentReference });
+}
+
+async function subscribeInternal(
+  target: { voucherCode?: string; paymentReference?: string },
+): Promise<PushSubscribeResult> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
 
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -38,7 +59,7 @@ export async function subscribeToVoucherPush(voucherCode: string): Promise<PushS
   await subscribePush({
     endpoint: json.endpoint,
     keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-    voucherCode,
+    ...target,
   });
 
   return 'subscribed';

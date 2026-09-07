@@ -22,4 +22,10 @@ export class SubscribePushDto {
   @IsString()
   @MaxLength(32)
   voucherCode?: string;
+
+  /** Sent from the checkout page, where there's a payment reference but no voucher yet. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  paymentReference?: string;
 }

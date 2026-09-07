@@ -7,5 +7,8 @@ export function trialUpsellTemplate(opts: { name?: string; buyUrl: string }): st
     <div style="text-align:center;margin:22px 0;">${button('Buy a plan', opts.buyUrl)}</div>
     <p style="margin:0;">Questions? Just reply to this email.<br />Shaddai Comm Ventures</p>
   `;
-  return baseTemplate({ preheader: 'Your free trial ended — plans start whenever you are ready.', bodyHtml });
+  return baseTemplate({
+    preheader: 'Your free trial ended — plans start whenever you are ready.',
+    bodyHtml,
+  });
 }

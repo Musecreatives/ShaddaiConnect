@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { RadAcct } from '@prisma/client';
 import { OmadaClientService } from '../network/omada-client.service';
+import { PfsenseService } from '../pfsense/pfsense.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface SessionDto {
@@ -53,14 +54,30 @@ export class SessionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly omada: OmadaClientService,
+    private readonly pfsense: PfsenseService,
     config: ConfigService,
   ) {
     this.invertOctets = config.get('RADIUS_INVERT_OCTETS') === 'true';
   }
 
   async list(filter: ListSessionsFilter = {}): Promise<{ sessions: SessionDto[]; total: number }> {
+    const [omadaClients, pfResult] = await Promise.all([
+      this.omada.getConnectedClients(),
+      this.pfsense.isEnabled ? this.pfsense.listSessions() : Promise.resolve(null),
+    ]);
+    const byMac = new Map(omadaClients.map((c) => [normalizeMac(c.mac), c]));
+    const staleStatuses = new Set(['expired', 'disabled']);
+
+    const pfSessions = pfResult?.ok ? (pfResult.data ?? []) : null;
+
+    if (filter.status === 'live' && pfSessions) {
+      return this.listLiveFromPfsense(pfSessions, byMac, staleStatuses, filter);
+    }
+
+    // History, or pfSense unreachable: fall back to radacct. `live` here is only as good as
+    // radacct's accounting, which is exactly the thing that over-reports (see listLiveFromPfsense).
     const where = filter.status === 'live' ? { acctStopTime: null } : {};
-    const [rows, total, omadaClients] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.radAcct.findMany({
         where,
         orderBy: { acctStartTime: 'desc' },
@@ -68,13 +85,9 @@ export class SessionsService {
         skip: filter.offset ?? 0,
       }),
       this.prisma.radAcct.count({ where }),
-      this.omada.getConnectedClients(),
     ]);
 
-    const byMac = new Map(omadaClients.map((c) => [normalizeMac(c.mac), c]));
-
     const liveCodes = rows.filter((r) => r.acctStopTime === null).map((r) => r.username);
-    const staleStatuses = new Set(['expired', 'disabled']);
     const vouchers =
       liveCodes.length > 0
         ? await this.prisma.voucher.findMany({
@@ -87,6 +100,89 @@ export class SessionsService {
     return {
       sessions: rows.map((row) => this.toDto(row, byMac, voucherStatusByCode, staleStatuses)),
       total,
+    };
+  }
+
+  /**
+   * pfSense's own captive-portal session table is the authority on who is actually online.
+   * `radacct` is not: when pfSense/FreeRADIUS misses an Accounting-Stop the row stays open
+   * forever, and a captive-portal re-login can open a *second* row for the same device instead
+   * of continuing the first. On 2026-08-30 that had the admin Sessions page reporting 12
+   * "connected" devices while pfSense knew about exactly one — with days-old rows still counting
+   * up, and blank AP/Signal columns because Omada (which only knows currently-online clients)
+   * had nothing to match those ghosts against.
+   *
+   * So build the live list from pfSense and use radacct only to enrich it with byte counters.
+   */
+  private async listLiveFromPfsense(
+    pfSessions: {
+      sessionid: string;
+      username: string | null;
+      ip: string | null;
+      mac: string | null;
+    }[],
+    omadaByMac: Map<string, { rssi: number | null; apName: string | null }>,
+    staleStatuses: Set<string>,
+    filter: ListSessionsFilter,
+  ): Promise<{ sessions: SessionDto[]; total: number }> {
+    const codes = [...new Set(pfSessions.map((s) => s.username).filter((u): u is string => !!u))];
+    const rows: RadAcct[] =
+      codes.length > 0
+        ? await this.prisma.radAcct.findMany({
+            where: { username: { in: codes } },
+            orderBy: { acctStartTime: 'desc' },
+          })
+        : [];
+    const vouchers: { code: string; status: string }[] =
+      codes.length > 0
+        ? await this.prisma.voucher.findMany({
+            where: { code: { in: codes } },
+            select: { code: true, status: true },
+          })
+        : [];
+    const voucherStatusByCode = new Map<string, string>(vouchers.map((v) => [v.code, v.status]));
+
+    const sessions: SessionDto[] = pfSessions.map((s) => {
+      const mac = s.mac ?? '';
+      const username = s.username ?? '';
+      // Newest matching accounting row wins — `rows` is already sorted newest-first, so among
+      // duplicate open rows for one device this picks the one for the current connection.
+      const row =
+        rows.find(
+          (r) => r.username === username && normalizeMac(r.callingStationId) === normalizeMac(mac),
+        ) ?? rows.find((r) => r.username === username);
+
+      const rawIn = Number(row?.acctInputOctets ?? 0);
+      const rawOut = Number(row?.acctOutputOctets ?? 0);
+      const startedAt = row?.acctStartTime ?? null;
+      const durationSeconds = startedAt
+        ? Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000))
+        : null;
+      const omadaMatch = omadaByMac.get(normalizeMac(mac));
+      const voucherStatus = voucherStatusByCode.get(username);
+
+      return {
+        id: row?.acctUniqueId ?? s.sessionid,
+        username,
+        macAddress: mac,
+        ipAddress: s.ip ?? row?.framedIpAddress ?? '',
+        nasIpAddress: row?.nasIpAddress ?? '',
+        startedAt,
+        stoppedAt: null,
+        durationSeconds,
+        downloadBytes: this.invertOctets ? rawIn : rawOut,
+        uploadBytes: this.invertOctets ? rawOut : rawIn,
+        live: true,
+        stale: !!voucherStatus && staleStatuses.has(voucherStatus),
+        signalRssi: omadaMatch?.rssi ?? null,
+        apName: omadaMatch?.apName ?? null,
+      };
+    });
+
+    const offset = filter.offset ?? 0;
+    return {
+      sessions: sessions.slice(offset, offset + (filter.limit ?? 50)),
+      total: sessions.length,
     };
   }
 
@@ -105,7 +201,10 @@ export class SessionsService {
       durationSeconds = row.acctSessionTime;
     } else if (row.acctStartTime) {
       const end = row.acctStopTime ?? new Date();
-      durationSeconds = Math.max(0, Math.floor((end.getTime() - row.acctStartTime.getTime()) / 1000));
+      durationSeconds = Math.max(
+        0,
+        Math.floor((end.getTime() - row.acctStartTime.getTime()) / 1000),
+      );
     }
 
     // Omada only reports currently-online clients — there's no historical AP/RSSI store. Only

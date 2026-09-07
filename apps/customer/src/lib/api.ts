@@ -1,4 +1,17 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
+const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
+/** Server-only (no NEXT_PUBLIC_ prefix, so it never reaches the browser bundle). */
+const INTERNAL_API_URL = process.env.API_INTERNAL_URL;
+
+/**
+ * Server Components must not fetch the API through its public hostname. This app runs on the
+ * same host as the API (`network_mode: host`), so a public-URL fetch leaves the box, crosses
+ * Cloudflare and comes back — measured at **1.28s vs 1.7ms** on localhost, which was the entire
+ * reason the buy page took ~1s to render (two sequential fetches ≈ two round trips).
+ * The browser still needs the public URL, hence the split.
+ */
+function apiBase(): string {
+  return typeof window === 'undefined' && INTERNAL_API_URL ? INTERNAL_API_URL : PUBLIC_API_URL;
+}
 
 export interface Plan {
   id: number;
@@ -62,7 +75,7 @@ class ApiError extends Error {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${apiBase()}${path}`, {
     ...init,
     cache: 'no-store',
     headers: { 'Content-Type': 'application/json', ...init?.headers },
@@ -81,8 +94,9 @@ export function getPublicPlans(): Promise<Plan[]> {
 
 export function initializePayment(input: {
   planId: number;
+  fullName: string;
   email: string;
-  phone?: string;
+  phone: string;
   termsAccepted: boolean;
 }): Promise<InitializePaymentResult> {
   return apiFetch<InitializePaymentResult>('/payments/initialize', {
@@ -103,6 +117,8 @@ export interface PushSubscriptionInput {
   endpoint: string;
   keys: { p256dh: string; auth: string };
   voucherCode?: string;
+  /** Used at checkout, before a voucher exists, so an abandoned payment can be nudged. */
+  paymentReference?: string;
 }
 
 export function subscribePush(input: PushSubscriptionInput): Promise<{ subscribed: true }> {
@@ -114,6 +130,18 @@ export interface RequestTrialCodeInput {
   email: string;
   phone: string;
   locationNote: string;
+}
+
+export function getTrialAvailability(): Promise<{ available: boolean }> {
+  return apiFetch('/trial/availability');
+}
+
+/** Admin-editable copy (announcement banner, trial-paused note, etc). Keys come from
+ * SITE_SETTING_FIELDS on the API side; a key that's never been set comes back as ''. */
+export type SiteSettings = Record<string, string>;
+
+export function getSiteSettings(): Promise<SiteSettings> {
+  return apiFetch('/site-settings');
 }
 
 export function requestTrialCode(input: RequestTrialCodeInput): Promise<{ sent: true }> {

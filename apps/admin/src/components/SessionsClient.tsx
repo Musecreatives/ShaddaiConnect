@@ -2,6 +2,7 @@
 
 import { SignalMeter } from '@shaddai/ui';
 import { useEffect, useState } from 'react';
+import { useConfirm } from '@/components/DialogProvider';
 import { ApiError, blockMac, disconnectVoucher, getSessions, type SessionRow } from '@/lib/api';
 
 const LIVE_REFRESH_MS = 10_000;
@@ -36,6 +37,7 @@ export function SessionsClient({
   initialSessions: SessionRow[];
   initialTotal: number;
 }) {
+  const confirmDialog = useConfirm();
   const [view, setView] = useState<'live' | 'all'>('live');
   const [sessions, setSessions] = useState(initialSessions);
   const [total, setTotal] = useState(initialTotal);
@@ -46,9 +48,11 @@ export function SessionsClient({
   const [notice, setNotice] = useState<string | null>(null);
 
   async function handleBlock(mac: string) {
-    if (!window.confirm(`Block device ${mac}? This disables any voucher it's used, on any plan.`)) {
-      return;
-    }
+    const ok = await confirmDialog(`Block device ${mac}? This disables any voucher it's used, on any plan.`, {
+      title: 'Block device',
+      danger: true,
+    });
+    if (!ok) return;
     setBlockingMac(mac);
     setError(null);
     try {

@@ -2,21 +2,21 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useConfirm } from '@/components/DialogProvider';
 import { ApiError, notifyImportedWaitlistSignups } from '@/lib/api';
 
 export function NotifyImportedButton({ pendingCount }: { pendingCount: number }) {
   const router = useRouter();
+  const confirmDialog = useConfirm();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
   async function handleClick() {
-    if (
-      !confirm(
-        `Send the waitlist confirmation email to ${pendingCount} pending ${pendingCount === 1 ? 'signup' : 'signups'}?`,
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDialog(
+      `Send the waitlist confirmation email to ${pendingCount} pending ${pendingCount === 1 ? 'signup' : 'signups'}?`,
+      { title: 'Send confirmations' },
+    );
+    if (!ok) return;
     setLoading(true);
     setResult(null);
     try {

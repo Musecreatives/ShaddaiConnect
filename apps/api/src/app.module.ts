@@ -23,7 +23,11 @@ import { NtfyModule } from './ntfy/ntfy.module';
 import { BlockedMacsModule } from './blocked-macs/blocked-macs.module';
 import { PushModule } from './push/push.module';
 import { CoaModule } from './coa/coa.module';
+import { PfsenseModule } from './pfsense/pfsense.module';
+import { SiteSettingsModule } from './site-settings/site-settings.module';
 import { AuditModule } from './audit/audit.module';
+import { JournalModule } from './journal/journal.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -51,7 +55,11 @@ import { AuditModule } from './audit/audit.module';
     BlockedMacsModule,
     PushModule,
     CoaModule,
+    PfsenseModule,
+    SiteSettingsModule,
     AuditModule,
+    JournalModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

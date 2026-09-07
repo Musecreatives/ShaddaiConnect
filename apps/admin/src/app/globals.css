@@ -1,2 +1,27 @@
 @import 'tailwindcss';
 @import '@shaddai/ui/theme.css';
+
+/*
+ * Admin redesign (2026-09-06, Claude Design import "Shaddai Admin.dc.html") — overrides the
+ * shared @shaddai/ui palette/fonts for this app's build only (each app compiles its own
+ * globals.css, so customer is unaffected). Deep navy + sky blue replaces the old navy/brand-blue
+ * set; DM Serif Display / Manrope replace Poppins / Inter, matching the imported design. Every
+ * existing page already builds on these token names (bg-navy, text-ink, border-line, etc.)
+ * rather than hardcoded hex, so this cascades the new look across the whole admin without a
+ * per-page rewrite.
+ */
+@theme {
+  --font-display: var(--font-dm-serif), Georgia, serif;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+
+  --color-navy: #06263b;
+  --color-navy-2: #0a3a58;
+  --color-brand-blue: #0e7cc0;
+  --color-brand-blue-deep: #06263b;
+  --color-brand-blue-light: #7ec2e8;
+  --color-ink: #06263b;
+  --color-muted: #5c7f94;
+  --color-line: #dce8f0;
+  --color-page: #eef2f5;
+  --color-surface: #ffffff;
+}

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PfsenseService } from '../pfsense/pfsense.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface AdminStats {
@@ -22,7 +23,10 @@ function startOfDay(daysAgo: number): Date {
 
 @Injectable()
 export class StatsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pfsense: PfsenseService,
+  ) {}
 
   async getStats(): Promise<AdminStats> {
     const today = startOfDay(0);
@@ -67,7 +71,16 @@ export class StatsService {
           });
         }),
       ),
-      this.prisma.radAcct.count({ where: { acctStopTime: null } }),
+      // Who is actually online comes from pfSense, not radacct. A missed Accounting-Stop leaves
+      // radacct rows open forever, which had the dashboard reporting 11 "active sessions" while
+      // pfSense knew about one. Falls back to the radacct count only if pfSense is unreachable.
+      this.pfsense
+        .listSessionsCached()
+        .then((sessions) =>
+          sessions !== null
+            ? sessions.length
+            : this.prisma.radAcct.count({ where: { acctStopTime: null } }),
+        ),
       this.prisma.voucher.count({ where: { createdAt: { gte: today } } }),
       this.prisma.voucher.count(),
       // Approximate "today's data": sessions that started today. Doesn't account for

@@ -39,7 +39,10 @@ export class CoaService {
   }
 
   /** Disconnects the currently-open session for a voucher code, if any. No-op (not an error) if
-   * nothing is currently connected under that code. */
+   * nothing is currently connected under that code. When a voucher has more than one open
+   * session (see VoucherActivationService's duplicate-session cleanup), this always targets the
+   * *most recent* one — callers that need to kick a specific older/superseded session instead
+   * must use disconnectSession(). */
   async disconnectVoucher(code: string): Promise<DisconnectResult> {
     const session = await this.prisma.radAcct.findFirst({
       where: { username: code, acctStopTime: null },
@@ -56,6 +59,21 @@ export class CoaService {
       return { attempted: false, success: false, message: 'No open session for this voucher.' };
     }
 
+    return this.disconnectSession(session, code);
+  }
+
+  /** Disconnects one specific open session (as opposed to disconnectVoucher(), which always
+   * picks the most recent). Needed when a voucher has multiple open radacct rows and the
+   * *older* one(s) — not the current one — need to be kicked. */
+  async disconnectSession(
+    session: {
+      nasIpAddress: string;
+      callingStationId: string;
+      framedIpAddress: string;
+      acctSessionId: string;
+    },
+    code: string,
+  ): Promise<DisconnectResult> {
     // radacct's recorded nasIpAddress for a given session isn't reliable — pfSense and
     // FreeRADIUS have been observed logging different source addresses for the same physical
     // NAS across sessions (LAN IP, the KVM host's NAT interface, a public IP, a Tailscale IP),
@@ -139,11 +157,18 @@ export class CoaService {
       try {
         const packet = radius.encode({ code: 'Disconnect-Request', secret, attributes });
         socket.send(packet, 0, packet.length, this.port, nasIp, (err) => {
-          if (err) finish({ attempted: true, success: false, message: `Send failed: ${err.message}` });
+          if (err)
+            finish({ attempted: true, success: false, message: `Send failed: ${err.message}` });
         });
       } catch (err) {
-        this.logger.warn(`Failed to build Disconnect-Request for ${code}: ${(err as Error).message}`);
-        finish({ attempted: true, success: false, message: `Failed to build packet: ${(err as Error).message}` });
+        this.logger.warn(
+          `Failed to build Disconnect-Request for ${code}: ${(err as Error).message}`,
+        );
+        finish({
+          attempted: true,
+          success: false,
+          message: `Failed to build packet: ${(err as Error).message}`,
+        });
       }
     });
   }

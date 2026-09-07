@@ -12,7 +12,10 @@ export class TrialFeedbackService {
    * lookup. Only trial-plan vouchers are valid targets; a real paid voucher submitting here would
    * be a mistake, not a legitimate feedback flow. */
   async submit(code: string, dto: SubmitTrialFeedbackDto): Promise<{ submitted: true }> {
-    const voucher = await this.prisma.voucher.findUnique({ where: { code }, include: { plan: true } });
+    const voucher = await this.prisma.voucher.findUnique({
+      where: { code },
+      include: { plan: true },
+    });
     if (!voucher || voucher.plan.name !== TRIAL_PLAN_NAME) {
       throw new NotFoundException('Trial voucher not found');
     }
@@ -53,5 +56,65 @@ export class TrialFeedbackService {
       comments: f.comments,
       createdAt: f.createdAt,
     }));
+  }
+
+  /**
+   * Devices (MACs) that have shown up on more than one Free Trial voucher — pure analytics view
+   * for admin review (CLAUDE.md: devices table is analytics only, never enforcement; this reads
+   * it, it doesn't act on it — VoucherActivationService.blockRepeatTrialDevices is the one place
+   * that actually blocks on this signal). Sourced from `devices`, written by
+   * VoucherActivationService.recordDeviceSightings on every trial activation.
+   */
+  async findRepeatTrialDevices() {
+    const trialPlan = await this.prisma.plan.findFirst({ where: { name: TRIAL_PLAN_NAME } });
+    if (!trialPlan) return [];
+
+    const trialVouchers = await this.prisma.voucher.findMany({
+      where: { planId: trialPlan.id },
+      select: { id: true, code: true, customerId: true },
+    });
+    if (trialVouchers.length === 0) return [];
+    const voucherById = new Map(trialVouchers.map((v) => [v.id, v]));
+
+    const devices = await this.prisma.device.findMany({
+      where: { voucherId: { in: trialVouchers.map((v) => v.id) } },
+      orderBy: { firstSeen: 'asc' },
+    });
+    if (devices.length === 0) return [];
+
+    const customerIds = [
+      ...new Set(trialVouchers.map((v) => v.customerId).filter((id): id is number => id != null)),
+    ];
+    const customers = await this.prisma.customer.findMany({ where: { id: { in: customerIds } } });
+    const customerById = new Map(customers.map((c) => [c.id, c]));
+
+    const byMac = new Map<
+      string,
+      {
+        voucherCode: string;
+        firstSeen: Date;
+        customer: { name: string | null; phone: string | null; email: string | null } | null;
+      }[]
+    >();
+    for (const device of devices) {
+      const voucher = voucherById.get(device.voucherId);
+      if (!voucher) continue;
+      const customer = voucher.customerId ? (customerById.get(voucher.customerId) ?? null) : null;
+      const entry = {
+        voucherCode: voucher.code,
+        firstSeen: device.firstSeen,
+        customer: customer
+          ? { name: customer.name, phone: customer.phone, email: customer.email }
+          : null,
+      };
+      const list = byMac.get(device.macAddress);
+      if (list) list.push(entry);
+      else byMac.set(device.macAddress, [entry]);
+    }
+
+    return [...byMac.entries()]
+      .map(([macAddress, usages]) => ({ macAddress, usageCount: usages.length, usages }))
+      .filter((row) => row.usageCount > 1)
+      .sort((a, b) => b.usageCount - a.usageCount);
   }
 }

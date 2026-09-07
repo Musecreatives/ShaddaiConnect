@@ -1,8 +1,16 @@
 import { baseTemplate, codeChip } from './base.template';
 
-export function voucherTemplate(opts: { code: string; planName: string; expiresAt?: Date | null }): string {
+export function voucherTemplate(opts: {
+  code: string;
+  planName: string;
+  expiresAt?: Date | null;
+}): string {
   const expiry = opts.expiresAt
-    ? new Date(opts.expiresAt).toLocaleString('en-NG', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })
+    ? new Date(opts.expiresAt).toLocaleString('en-NG', {
+        timeZone: 'Africa/Lagos',
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
     : null;
   return baseTemplate({
     preheader: `Your Shaddai WiFi voucher: ${opts.code}`,

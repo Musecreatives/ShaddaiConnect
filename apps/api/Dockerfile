@@ -29,6 +29,11 @@ RUN cd /out && npx --yes prisma@6.19.3 generate
 FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+# openssh-client: PfsenseService drives pfSense's captive portal (real-time session disconnect
+# and MAC block/unblock) by running pfSsh.php playback scripts over SSH. This is the only
+# mechanism that actually works — pfSense's captive portal never implemented RADIUS CoA
+# (Redmine #13625), so CoaService's Disconnect-Requests to UDP 3799 always time out.
+RUN apk add --no-cache openssh-client
 COPY --from=build /out ./
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

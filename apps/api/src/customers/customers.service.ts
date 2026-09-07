@@ -55,7 +55,9 @@ export class CustomersService {
     ]);
 
     const voucherCountById = new Map(voucherCounts.map((v) => [v.customerId, v._count.id]));
-    const paidById = new Map(paymentSums.map((p) => [p.customerId, Number(p._sum.amountNaira ?? 0)]));
+    const paidById = new Map(
+      paymentSums.map((p) => [p.customerId, Number(p._sum.amountNaira ?? 0)]),
+    );
 
     return {
       total,
@@ -129,7 +131,9 @@ export class CustomersService {
     ]);
 
     const paidIds = new Set(paidCustomers.map((p) => p.customerId!));
-    const failedOnlyIds = failedCustomers.map((p) => p.customerId!).filter((id) => !paidIds.has(id));
+    const failedOnlyIds = failedCustomers
+      .map((p) => p.customerId!)
+      .filter((id) => !paidIds.has(id));
     if (failedOnlyIds.length === 0) return [];
 
     const eligible = await this.prisma.customer.findMany({
@@ -144,7 +148,10 @@ export class CustomersService {
       this.trialUpsellCandidateIds(),
       this.paymentReminderCandidateIds(),
     ]);
-    return { trialUpsellPending: trialUpsell.length, paymentReminderPending: paymentReminder.length };
+    return {
+      trialUpsellPending: trialUpsell.length,
+      paymentReminderPending: paymentReminder.length,
+    };
   }
 
   async notifyTrialUpsell(): Promise<{ notified: number }> {

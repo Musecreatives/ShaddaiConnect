@@ -32,6 +32,11 @@ services:
     environment:
       PORT: '4001'
     mem_limit: 512m
+    # Site-settings CMS image uploads (main.ts useStaticAssets / site-settings.controller.ts
+    # diskStorage both resolve to this same path) — without this, an upload is lost the next time
+    # the container is recreated (done routinely for .env changes).
+    volumes:
+      - api-uploads:/app/uploads
 
   customer:
     build:
@@ -128,3 +133,4 @@ services:
 
 volumes:
   ntfy-cache:
+  api-uploads:

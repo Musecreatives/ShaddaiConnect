@@ -12,7 +12,11 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-export function supportContactTemplate(opts: { name: string; email: string; message: string }): string {
+export function supportContactTemplate(opts: {
+  name: string;
+  email: string;
+  message: string;
+}): string {
   const name = escapeHtml(opts.name);
   const email = escapeHtml(opts.email);
   const message = escapeHtml(opts.message);

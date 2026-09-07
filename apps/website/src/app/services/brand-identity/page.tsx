@@ -1,5 +1,4 @@
 import { ServicePageTemplate } from '@/components/ServicePageTemplate';
-import { SERVICE_ICONS } from '@/components/ServiceVisual';
 
 export const metadata = { title: 'Brand Identity — Shaddai Communications' };
 
@@ -8,7 +7,7 @@ export default function BrandIdentityServicePage() {
     <ServicePageTemplate
       eyebrow="Brand identity"
       title="Look professional from day one"
-      icon={SERVICE_ICONS['brand-identity']}
+      imageSrc="/images/services/brand-identity.jpg"
       description="Logo design, brand guidelines, and business cards — a cohesive visual identity that makes your business look established, not improvised."
       ctaLabel="Get a quote"
       quoteMessage="Hi, I'd like a quote for brand identity design for my business."

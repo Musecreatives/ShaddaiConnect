@@ -29,7 +29,8 @@ export class PushService {
   ) {
     const publicKey = config.get<string>('VAPID_PUBLIC_KEY');
     const privateKey = config.get<string>('VAPID_PRIVATE_KEY');
-    const subject = config.get<string>('VAPID_SUBJECT') ?? 'mailto:support@shaddaicommunications.com';
+    const subject =
+      config.get<string>('VAPID_SUBJECT') ?? 'mailto:support@shaddaicommunications.com';
     this.enabled = Boolean(publicKey && privateKey);
 
     if (this.enabled) {
@@ -47,17 +48,37 @@ export class PushService {
         p256dh: dto.keys.p256dh,
         auth: dto.keys.auth,
         voucherCode: dto.voucherCode,
+        paymentReference: dto.paymentReference,
       },
-      update: { voucherCode: dto.voucherCode },
+      // Only overwrite a field the caller actually supplied: the checkout page subscribes with a
+      // paymentReference and the success page later re-subscribes the same endpoint with a
+      // voucherCode, and neither should wipe the other.
+      update: {
+        ...(dto.voucherCode !== undefined ? { voucherCode: dto.voucherCode } : {}),
+        ...(dto.paymentReference !== undefined ? { paymentReference: dto.paymentReference } : {}),
+      },
     });
     return { subscribed: true };
+  }
+
+  /** Nudges a customer who started a payment but never completed it. Keyed by the payment
+   * reference because at that point no voucher exists yet. */
+  async sendToPaymentReference(reference: string, payload: PushPayload): Promise<void> {
+    if (!this.enabled) return;
+    const subs = await this.prisma.pushSubscription.findMany({
+      where: { paymentReference: reference },
+    });
+    await Promise.all(subs.map((sub) => this.sendToSubscription(sub, payload)));
   }
 
   async unsubscribe(endpoint: string): Promise<void> {
     await this.prisma.pushSubscription.deleteMany({ where: { endpoint } });
   }
 
-  async subscribeAdmin(dto: SubscribeAdminPushDto, adminEmail: string): Promise<{ subscribed: true }> {
+  async subscribeAdmin(
+    dto: SubscribeAdminPushDto,
+    adminEmail: string,
+  ): Promise<{ subscribed: true }> {
     await this.prisma.pushSubscription.upsert({
       where: { endpoint: dto.endpoint },
       create: {

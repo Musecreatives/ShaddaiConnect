@@ -93,7 +93,9 @@ export class WaitlistService {
       // number in the email column ("+234..."). No `@` means it can't be a real email — reject
       // it here rather than silently storing a value that would later bounce at send time.
       if (!row.email.includes('@')) {
-        summary.errors.push(`Row ${row.rowNumber}: "${row.email}" doesn't look like an email, skipped.`);
+        summary.errors.push(
+          `Row ${row.rowNumber}: "${row.email}" doesn't look like an email, skipped.`,
+        );
         continue;
       }
       try {
@@ -151,7 +153,8 @@ export class WaitlistService {
   }
 
   async notifyLaunch(): Promise<{ notified: number }> {
-    const buyUrl = this.config.get<string>('CUSTOMER_APP_URL') || 'https://buy.shaddaicommunications.com';
+    const buyUrl =
+      this.config.get<string>('CUSTOMER_APP_URL') || 'https://buy.shaddaicommunications.com';
     const pending = await this.prisma.waitlist.findMany({
       where: { notifiedAt: null, email: { not: null } },
     });

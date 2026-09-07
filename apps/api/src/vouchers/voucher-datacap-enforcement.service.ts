@@ -1,23 +1,29 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { PfsenseService } from '../pfsense/pfsense.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * Fair-use data cap enforcement. There's no standard RADIUS reply attribute that NAS hardware
- * honors for "kill this session after N bytes" the way Session-Timeout works for time — real
- * throttling-after-cap would need CoA (Change of Authorization, RFC 5176) support configured on
- * pfSense's RADIUS client settings, which isn't confirmed to be set up and is a bigger, separate
- * task. This does a hard cutoff instead (same neutralize-radcheck mechanism as the cumulative
- * time enforcement), which needs no pfSense-side config at all.
+ * Fair-use data cap enforcement. No standard RADIUS reply attribute makes a NAS kill a session
+ * after N bytes the way Session-Timeout does for time, so this does a hard cutoff: neutralize
+ * radcheck (stops the next login) *and* kick the live session via PfsenseService.
  *
- * Dormant by default — `plans.dataCapMb` is null on every plan today, so this only starts
- * expiring vouchers once an admin actually sets a cap via the existing Plans CRUD.
+ * The live kick matters — without it someone over their cap keeps browsing until their session
+ * happens to end, which for a monthly voucher could be days. (The original note here suggested
+ * RADIUS CoA for this; that turned out to be a dead end — pfSense's captive portal never
+ * implemented it, Redmine #13625 — so we drive pfSense's own disconnect instead.)
+ *
+ * Dormant until a plan actually has `dataCapMb` set, which is now editable on the admin Plans
+ * form.
  */
 @Injectable()
 export class VoucherDataCapEnforcementService {
   private readonly logger = new Logger(VoucherDataCapEnforcementService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pfsense: PfsenseService,
+  ) {}
 
   @Cron('*/2 * * * *')
   async enforceDataCaps(): Promise<void> {
@@ -50,6 +56,10 @@ export class VoucherDataCapEnforcementService {
         await tx.radCheck.deleteMany({ where: { username: voucher.code } });
         await tx.voucher.update({ where: { id: voucher.id }, data: { status: 'expired' } });
       });
+      const kick = await this.pfsense.disconnect(voucher.code);
+      this.logger.log(
+        `${voucher.code} hit its ${voucher.plan.dataCapMb}MB cap (${Math.round(usedBytes / 1_000_000)}MB used). ${kick.message}`,
+      );
       expiredCount++;
     }
 

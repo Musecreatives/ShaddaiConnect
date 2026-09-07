@@ -7,7 +7,6 @@ import { ApiError, getVouchers, patchVoucher, type Plan, type Voucher } from '@/
 import { downloadCsv } from '@/lib/csv';
 import { CreateVoucherModal } from './CreateVoucherModal';
 
-const STORAGE_KEY = 'shaddai_admin_print_batch';
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
@@ -60,8 +59,9 @@ export function VouchersClient({
   function handleCreated(created: Voucher[]) {
     setShowCreate(false);
     if (created.length > 1) {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(created));
-      router.push('/vouchers/print');
+      // Pass ids in the URL rather than sessionStorage so the sheet can be reopened, refreshed
+      // or bookmarked — you often need to print a batch more than once.
+      router.push(`/vouchers/print?ids=${created.map((v) => v.id).join(',')}`);
       return;
     }
     setVouchers((prev) => [...created, ...prev]);
@@ -85,8 +85,8 @@ export function VouchersClient({
       `vouchers-${new Date().toISOString().slice(0, 10)}.csv`,
       vouchers.map((v) => ({
         code: v.code,
-        plan: v.plan.name,
-        planType: v.plan.planType,
+        plan: v.plan?.name ?? '',
+        planType: v.plan?.planType ?? '',
         status: v.status,
         createdAt: v.createdAt,
         expiresAt: v.expiresAt ?? '',
@@ -138,6 +138,16 @@ export function VouchersClient({
             className="rounded-btn border border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:border-brand-blue hover:text-brand-blue-deep"
           >
             Export CSV
+          </button>
+          {/* Prints whatever is currently listed, so an existing batch can be reprinted (or a
+              filtered set printed) without generating new codes. */}
+          <button
+            type="button"
+            onClick={() => router.push(`/vouchers/print?ids=${vouchers.map((v) => v.id).join(',')}`)}
+            disabled={vouchers.length === 0}
+            className="rounded-btn border border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:border-brand-blue hover:text-brand-blue-deep disabled:opacity-35"
+          >
+            Print these ({vouchers.length})
           </button>
           <button
             type="button"
@@ -197,9 +207,9 @@ export function VouchersClient({
               <div className="font-mono text-[13px] font-semibold text-ink">{voucher.code}</div>
               <div className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted">
                 <span className="truncate">
-                  {voucher.plan.name} · {formatDate(voucher.createdAt)}
+                  {voucher.plan?.name ?? '—'} · {formatDate(voucher.createdAt)}
                 </span>
-                <PlanTypeTag planType={voucher.plan.planType} />
+                {voucher.plan && <PlanTypeTag planType={voucher.plan.planType} />}
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -251,8 +261,8 @@ export function VouchersClient({
                 <td className="px-4 py-3 font-mono">{voucher.code}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <span>{voucher.plan.name}</span>
-                    <PlanTypeTag planType={voucher.plan.planType} />
+                    <span>{voucher.plan?.name ?? '—'}</span>
+                    {voucher.plan && <PlanTypeTag planType={voucher.plan.planType} />}
                   </div>
                 </td>
                 <td className="px-4 py-3">
@@ -262,7 +272,7 @@ export function VouchersClient({
                 <td className="px-4 py-3 text-muted">{formatDate(voucher.expiresAt)}</td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-3">
-                    {voucher.plan.planType === 'monthly' && voucher.status !== 'disabled' && (
+                    {voucher.plan?.planType === 'monthly' && voucher.status !== 'disabled' && (
                       <button
                         type="button"
                         disabled={busyId === voucher.id}

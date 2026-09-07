@@ -1,2 +1,32 @@
 @import 'tailwindcss';
 @import '@shaddai/ui/theme.css';
+
+/* Manual light/dark toggle (Tailwind v4 defaults to prefers-color-scheme only) — ThemeToggle.tsx
+   flips the `dark` class on <html>, this makes `dark:` variants respond to that instead. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Landing-page redesign (2026-09-06, Claude Design import "Shaddai Site.dc.html") — overrides
+ * the shared @shaddai/ui palette/fonts for this app's build only (each app compiles its own
+ * globals.css, so admin/customer are unaffected). Deep navy + sky blue replaces the old
+ * brand-blue set; DM Serif Display / Manrope replace Poppins / Inter, matching the imported
+ * design. Dark-mode tokens are nudged into the same navy family so the existing light/dark
+ * toggle (a real, working feature) still reads correctly against the new palette.
+ */
+@theme {
+  --font-display: var(--font-dm-serif), Georgia, serif;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+
+  --color-navy: #06263b;
+  --color-brand-blue: #0e7cc0;
+  --color-brand-blue-deep: #06263b;
+  --color-brand-blue-light: #7ec2e8;
+  --color-ink: #06263b;
+  --color-muted: #3d6076;
+  --color-line: #dce8f0;
+  --color-page: #f6f9fb;
+  --color-surface: #ffffff;
+  --color-page-dark: #061826;
+  --color-surface-dark: #0a2033;
+  --color-line-dark: #16374a;
+}

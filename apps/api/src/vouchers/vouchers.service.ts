@@ -1,5 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, type Voucher } from '@prisma/client';
+import { PfsenseService } from '../pfsense/pfsense.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { formatRadiusExpiration } from './radius-date.util';
 import { generateVoucherCode } from './voucher-code.util';
@@ -20,13 +26,19 @@ export interface VoucherFilter {
   planId?: number;
   from?: Date;
   to?: Date;
+  /** When set, returns exactly these vouchers and ignores the other filters — used by the
+   * printable-batch page to re-open a specific batch. */
+  ids?: number[];
 }
 
 const MAX_CODE_ATTEMPTS = 15;
 
 @Injectable()
 export class VouchersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pfsense: PfsenseService,
+  ) {}
 
   /**
    * THE core operation (CLAUDE.md "core invariant"): a voucher is usable ONLY when its
@@ -34,7 +46,7 @@ export class VouchersService {
    * vouchers row without matching radcheck rows or vice versa.
    *
    * Callers that need the voucher issued atomically alongside their own writes (e.g. the
-   * Paystack webhook marking a payment successful) should use `issueInTx` with their own
+   * Flutterwave webhook marking a payment successful) should use `issueInTx` with their own
    * transaction client instead — Prisma's interactive transactions each hold a dedicated
    * connection, so calling `issue()` (which opens its own `$transaction`) from inside
    * another transaction would run on a second connection and not actually be atomic with it.
@@ -128,7 +140,11 @@ export class VouchersService {
     return voucher;
   }
 
-  async issueBatch(planId: number, quantity: number, opts: IssueVoucherOptions = {}): Promise<Voucher[]> {
+  async issueBatch(
+    planId: number,
+    quantity: number,
+    opts: IssueVoucherOptions = {},
+  ): Promise<Voucher[]> {
     const vouchers: Voucher[] = [];
     for (let i = 0; i < quantity; i++) {
       vouchers.push(await this.issue(planId, opts));
@@ -136,15 +152,32 @@ export class VouchersService {
     return vouchers;
   }
 
+  /** Re-reads vouchers with their plan attached. The admin voucher list is `include: { plan: true }`,
+   * so anything handed back to that UI has to carry the plan too — issue()/issueBatch() return a
+   * bare voucher, and prepending one of those to the list crashed the table on `voucher.plan.name`
+   * (looked like "creation failed", but the voucher was already saved — it reappeared on reload). */
+  async findWithPlan(ids: number[]) {
+    return this.prisma.voucher.findMany({
+      where: { id: { in: ids } },
+      include: { plan: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findAll(filter: VoucherFilter = {}) {
+    if (filter.ids?.length) {
+      // Oldest-first so a printed sheet reads in the order the batch was generated.
+      return this.prisma.voucher.findMany({
+        where: { id: { in: filter.ids } },
+        include: { plan: true },
+        orderBy: { id: 'asc' },
+      });
+    }
     return this.prisma.voucher.findMany({
       where: {
         status: filter.status,
         planId: filter.planId,
-        createdAt:
-          filter.from || filter.to
-            ? { gte: filter.from, lte: filter.to }
-            : undefined,
+        createdAt: filter.from || filter.to ? { gte: filter.from, lte: filter.to } : undefined,
       },
       include: { plan: true },
       orderBy: { createdAt: 'desc' },
@@ -162,7 +195,10 @@ export class VouchersService {
    * never RADIUS internals (CLAUDE.md: "Never expose internals in customer-facing text").
    */
   async findByCodePublic(code: string) {
-    const voucher = await this.prisma.voucher.findUnique({ where: { code }, include: { plan: true } });
+    const voucher = await this.prisma.voucher.findUnique({
+      where: { code },
+      include: { plan: true },
+    });
     if (!voucher) throw new NotFoundException('Voucher not found');
 
     // Read-only check for the captive portal's pre-flight validation (before it even attempts
@@ -172,9 +208,24 @@ export class VouchersService {
     // (IP, data used) — same read-only radacct access as everywhere else in this codebase.
     const openSession = await this.prisma.radAcct.findFirst({
       where: { username: code, acctStopTime: null },
-      select: { radAcctId: true, framedIpAddress: true, acctInputOctets: true, acctOutputOctets: true },
+      select: {
+        radAcctId: true,
+        framedIpAddress: true,
+        acctInputOctets: true,
+        acctOutputOctets: true,
+      },
       orderBy: { acctStartTime: 'desc' },
     });
+
+    // Whether the code is *actually* in use has to come from pfSense, not radacct. A missed
+    // Accounting-Stop leaves radacct rows open forever, and trusting them here told customers
+    // "already connected on another device" — blocking them from a voucher nobody was using.
+    // radacct is still fine as the source for the session's byte/IP details below; it's only
+    // the yes/no "is someone online right now" that it gets wrong. Falls back to radacct when
+    // pfSense is unreachable, which is no worse than the previous behaviour.
+    const pfSessions = await this.pfsense.listSessionsCached();
+    const connectedElsewhere =
+      pfSessions !== null ? pfSessions.some((s) => s.username === code) : !!openSession;
 
     // Hourly plans (incl. the free trial) don't set vouchers.expiresAt — their real duration
     // lives in radreply's Session-Timeout instead (see issueInTx). Surfacing it here lets the
@@ -195,12 +246,13 @@ export class VouchersService {
       expiresAt: voucher.expiresAt,
       activatedAt: voucher.activatedAt,
       sessionTimeoutSeconds,
-      connectedElsewhere: !!openSession,
+      connectedElsewhere,
       currentSession: openSession
         ? {
             ipAddress: openSession.framedIpAddress || null,
             dataUsedMb:
-              (Number(openSession.acctInputOctets ?? 0) + Number(openSession.acctOutputOctets ?? 0)) /
+              (Number(openSession.acctInputOctets ?? 0) +
+                Number(openSession.acctOutputOctets ?? 0)) /
               1_000_000,
           }
         : null,
@@ -263,7 +315,16 @@ export class VouchersService {
     });
   }
 
-  /** Monthly: pushes out validity (radcheck Expiration + vouchers.expiresAt). */
+  /**
+   * Monthly: pushes out validity (radcheck Expiration + vouchers.expiresAt). Fully
+   * re-provisions radcheck — Cleartext-Password and Simultaneous-Use included, not just
+   * Expiration — rather than assuming those rows are still there. They won't be if this is
+   * called on a voucher VoucherExpiryEnforcementService already auto-expired: that cron
+   * neutralizes radcheck the same way disable() does, so an Expiration-only update here would
+   * leave an extended voucher with a valid expiry date but no password, unable to authenticate
+   * at all. Also resets `status` back to active/unused (previously left however it was — this
+   * left an extended voucher displaying as `expired` in the admin UI while functionally live).
+   */
   async extend(id: number, additionalDays: number): Promise<Voucher> {
     if (additionalDays <= 0) throw new BadRequestException('additionalDays must be positive');
     const voucher = await this.findOneOrThrow(id);
@@ -272,30 +333,43 @@ export class VouchersService {
       throw new BadRequestException('extend() only applies to monthly plans');
     }
 
-    const base = voucher.expiresAt && voucher.expiresAt > new Date() ? voucher.expiresAt : new Date();
+    const base =
+      voucher.expiresAt && voucher.expiresAt > new Date() ? voucher.expiresAt : new Date();
     const newExpiresAt = new Date(base.getTime() + additionalDays * 24 * 60 * 60 * 1000);
+    const simultaneousUse = voucher.simultaneousUseOverride ?? plan.simultaneousUse;
 
     return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.radCheck.findFirst({
-        where: { username: voucher.code, attribute: 'Expiration' },
-      });
-      if (existing) {
-        await tx.radCheck.update({
-          where: { id: existing.id },
-          data: { value: formatRadiusExpiration(newExpiresAt) },
-        });
-      } else {
-        await tx.radCheck.create({
-          data: {
-            username: voucher.code,
-            attribute: 'Expiration',
-            op: ':=',
-            value: formatRadiusExpiration(newExpiresAt),
-          },
-        });
-      }
+      await tx.radCheck.deleteMany({ where: { username: voucher.code } });
 
-      return tx.voucher.update({ where: { id }, data: { expiresAt: newExpiresAt } });
+      await tx.radCheck.create({
+        data: {
+          username: voucher.code,
+          attribute: 'Cleartext-Password',
+          op: ':=',
+          value: voucher.code,
+        },
+      });
+      await tx.radCheck.create({
+        data: {
+          username: voucher.code,
+          attribute: 'Simultaneous-Use',
+          op: ':=',
+          value: String(simultaneousUse),
+        },
+      });
+      await tx.radCheck.create({
+        data: {
+          username: voucher.code,
+          attribute: 'Expiration',
+          op: ':=',
+          value: formatRadiusExpiration(newExpiresAt),
+        },
+      });
+
+      return tx.voucher.update({
+        where: { id },
+        data: { expiresAt: newExpiresAt, status: voucher.activatedAt ? 'active' : 'unused' },
+      });
     });
   }
 

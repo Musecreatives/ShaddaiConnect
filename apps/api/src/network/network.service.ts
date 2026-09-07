@@ -132,7 +132,8 @@ export class NetworkService {
       .map((row) => ({
         code: row.username,
         totalMb:
-          (Number(row._sum.acctInputOctets ?? 0) + Number(row._sum.acctOutputOctets ?? 0)) / 1_000_000,
+          (Number(row._sum.acctInputOctets ?? 0) + Number(row._sum.acctOutputOctets ?? 0)) /
+          1_000_000,
       }))
       .sort((a, b) => b.totalMb - a.totalMb);
 

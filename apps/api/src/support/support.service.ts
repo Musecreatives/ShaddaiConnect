@@ -17,7 +17,8 @@ export class SupportService {
   ) {}
 
   async contact(dto: ContactDto): Promise<{ sent: true }> {
-    const supportEmail = this.config.get<string>('SUPPORT_EMAIL') || 'support@shaddaicommunications.com';
+    const supportEmail =
+      this.config.get<string>('SUPPORT_EMAIL') || 'support@shaddaicommunications.com';
     await this.email.send({
       to: supportEmail,
       subject: `Support message from ${dto.name}`,
